@@ -82,6 +82,8 @@ export interface SearchVenuesQueryDto {
     radiusKm?: number;
     sportType?: string;
     q?: string;
+    minPrice?: number;
+    maxPrice?: number;
     page?: number;
     size?: number;
 }

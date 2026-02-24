@@ -33,6 +33,7 @@ export default function VenuesPage() {
   const [filters, setFilters] = useState<VenueSearchParams>({
     q: searchParams.get("q") || undefined,
     sportType: (searchParams.get("sport") as VenueSearchParams["sportType"]) || undefined,
+    size: 10,
   });
   const [viewMode, setViewMode] = useState<"grid" | "list" | "map">("grid");
   const [sortBy, setSortBy] = useState("rating");
@@ -44,6 +45,13 @@ export default function VenuesPage() {
     searchVenues({
       q: filters.q,
       sportType: filters.sportType,
+      lat: filters.lat,
+      lng: filters.lng,
+      radiusKm: filters.radiusKm,
+      minPrice: filters.minPrice,
+      maxPrice: filters.maxPrice,
+      page: filters.page,
+      size: filters.size ?? 10,
     });
   }, [filters, searchVenues]);
 

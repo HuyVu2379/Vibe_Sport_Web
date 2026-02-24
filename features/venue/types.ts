@@ -54,6 +54,8 @@ export interface VenueSearchParams {
   lat?: number;
   lng?: number;
   radiusKm?: number;
+  minPrice?: number;
+  maxPrice?: number;
   page?: number;
   size?: number;
 }
