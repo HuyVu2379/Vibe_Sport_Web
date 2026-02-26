@@ -21,6 +21,8 @@ export function useVenues() {
             if (params.lat) query.append('lat', params.lat.toString());
             if (params.lng) query.append('lng', params.lng.toString());
             if (params.radiusKm) query.append('radiusKm', params.radiusKm.toString());
+            if (params.minPrice !== undefined) query.append('minPrice', params.minPrice.toString());
+            if (params.maxPrice !== undefined) query.append('maxPrice', params.maxPrice.toString());
             if (params.page !== undefined) query.append('page', params.page.toString());
             if (params.size !== undefined) query.append('size', params.size.toString());
 

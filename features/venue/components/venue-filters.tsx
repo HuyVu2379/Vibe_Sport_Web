@@ -67,7 +67,13 @@ async function autocomplete(query: string): Promise<LocationSuggestion[]> {
 
 interface VenueFiltersProps {
   filters: VenueSearchParams;
+  /** Cập nhật filters mà không trigger search (dùng cho q, price, radius) */
   onFilterChange: (filters: VenueSearchParams) => void;
+  /** Trigger search ngay (dùng cho location, sportType, clearAll) */
+  onAutoSearch: (filters: VenueSearchParams) => void;
+  /** Clear tất cả filters và search ngay */
+  onClearAll: () => void;
+  /** Nút Search được bấm */
   onSearch: () => void;
 }
 
@@ -76,9 +82,32 @@ type LocationStatus = "idle" | "detecting" | "ready" | "manual";
 export function VenueFilters({
   filters,
   onFilterChange,
+  onAutoSearch,
+  onClearAll,
   onSearch,
 }: VenueFiltersProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // ── Price local state (hiển thị format VND) ───────────────────────────────
+  const formatVND = (value: number | undefined): string =>
+    value ? value.toLocaleString("vi-VN") : "";
+
+  const parseVND = (text: string): number | undefined => {
+    const digits = text.replace(/\D/g, "");
+    return digits ? Number(digits) : undefined;
+  };
+
+  const [minPriceText, setMinPriceText] = useState(formatVND(filters.minPrice));
+  const [maxPriceText, setMaxPriceText] = useState(formatVND(filters.maxPrice));
+
+  // Đồng bộ khi filters.minPrice/maxPrice bị reset từ bên ngoài (Clear All)
+  useEffect(() => {
+    setMinPriceText(formatVND(filters.minPrice));
+  }, [filters.minPrice]);
+
+  useEffect(() => {
+    setMaxPriceText(formatVND(filters.maxPrice));
+  }, [filters.maxPrice]);
 
   // ── Location state ────────────────────────────────────────────────────────
   const [locationLabel, setLocationLabel] = useState("");
@@ -102,7 +131,8 @@ export function VenueFilters({
           const label = await reverseGeocode(coords.latitude, coords.longitude);
           setLocationLabel(label);
           setLocationStatus("ready");
-          onFilterChange({
+          // Auto-search khi detect location thành công
+          onAutoSearch({
             ...filters,
             lat: coords.latitude,
             lng: coords.longitude,
@@ -140,7 +170,7 @@ export function VenueFilters({
   const handleLocationTyping = useCallback(
     (value: string) => {
       setLocationLabel(value);
-      // Clear coords when user is typing
+      // Clear coords khi user đang gõ (chưa chọn suggestion → chưa auto-search)
       onFilterChange({ ...filters, lat: undefined, lng: undefined });
 
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -158,28 +188,30 @@ export function VenueFilters({
     [filters, onFilterChange]
   );
 
-  // ── Select a suggestion ───────────────────────────────────────────────────
+  // ── Select a suggestion → auto-search ────────────────────────────────────
   const handleSelectSuggestion = useCallback(
     (s: LocationSuggestion) => {
       setLocationLabel(s.displayName);
       setSuggestions([]);
       setShowSuggestions(false);
       setLocationStatus("ready");
-      onFilterChange({ ...filters, lat: s.lat, lng: s.lng });
+      // Khi chọn địa chỉ → tự động search
+      onAutoSearch({ ...filters, lat: s.lat, lng: s.lng });
     },
-    [filters, onFilterChange]
+    [filters, onAutoSearch]
   );
 
-  // ── Clear location ────────────────────────────────────────────────────────
+  // ── Clear location → auto-search ─────────────────────────────────────────
   const clearLocation = useCallback(() => {
     setLocationLabel("");
     setLocationStatus("manual");
     setSuggestions([]);
     setShowSuggestions(false);
-    onFilterChange({ ...filters, lat: undefined, lng: undefined });
-  }, [filters, onFilterChange]);
+    // Xóa location → tự động search lại không có location
+    onAutoSearch({ ...filters, lat: undefined, lng: undefined });
+  }, [filters, onAutoSearch]);
 
-  // ── Re-detect location ────────────────────────────────────────────────────
+  // ── Re-detect location → auto-search ─────────────────────────────────────
   const reDetect = useCallback(() => {
     if (!navigator.geolocation) return;
     setLocationStatus("detecting");
@@ -190,7 +222,7 @@ export function VenueFilters({
           const label = await reverseGeocode(coords.latitude, coords.longitude);
           setLocationLabel(label);
           setLocationStatus("ready");
-          onFilterChange({ ...filters, lat: coords.latitude, lng: coords.longitude });
+          onAutoSearch({ ...filters, lat: coords.latitude, lng: coords.longitude });
         } catch {
           setLocationStatus("manual");
         }
@@ -198,9 +230,9 @@ export function VenueFilters({
       () => setLocationStatus("manual"),
       { timeout: 8000 }
     );
-  }, [filters, onFilterChange]);
+  }, [filters, onAutoSearch]);
 
-  // ── Generic filter updater ────────────────────────────────────────────────
+  // ── Generic filter updater (chỉ cập nhật local, chưa search) ────────────
   const updateFilter = (
     key: keyof VenueSearchParams,
     value: string | number | undefined
@@ -208,9 +240,18 @@ export function VenueFilters({
     onFilterChange({ ...filters, [key]: value });
   };
 
+  // ── Update sportType → auto-search ───────────────────────────────────────
+  const handleSportTypeChange = (value: string) => {
+    const sportType = value === "all" ? undefined : (value as VenueSearchParams["sportType"]);
+    onAutoSearch({ ...filters, sportType });
+  };
+
   const clearFilters = () => {
-    onFilterChange({ size: 10 });
-    clearLocation();
+    setLocationLabel("");
+    setLocationStatus("manual");
+    setSuggestions([]);
+    setShowSuggestions(false);
+    onClearAll();
   };
 
   const hasActiveFilters = Object.entries(filters).some(
@@ -304,12 +345,10 @@ export function VenueFilters({
           )}
         </div>
 
-        {/* Sport type */}
+        {/* Sport type — auto-search khi thay đổi */}
         <Select
           value={filters.sportType || "all"}
-          onValueChange={(v) =>
-            updateFilter("sportType", v === "all" ? undefined : v)
-          }
+          onValueChange={handleSportTypeChange}
         >
           <SelectTrigger className="w-full sm:w-[180px] bg-input">
             <SelectValue placeholder="Sport type" />
@@ -355,7 +394,7 @@ export function VenueFilters({
           {/* Search Radius */}
           <div>
             <label className="text-sm text-muted-foreground mb-1.5 block">
-              Search Radius (km)
+              Tìm kiếm trong bán kính (km)
             </label>
             <Select
               value={filters.radiusKm?.toString() || "10"}
@@ -376,43 +415,49 @@ export function VenueFilters({
           {/* Min Price */}
           <div>
             <label className="text-sm text-muted-foreground mb-1.5 block">
-              Min Price (₫/hr)
+              Giá tối thiểu (₫/giờ)
             </label>
-            <Input
-              type="number"
-              placeholder="0"
-              value={filters.minPrice || ""}
-              onChange={(e) =>
-                updateFilter(
-                  "minPrice",
-                  e.target.value ? Number(e.target.value) : undefined
-                )
-              }
-              className="bg-input"
-              min={0}
-              step={10000}
-            />
+            <div className="relative">
+              <Input
+                type="text"
+                inputMode="numeric"
+                placeholder="0"
+                value={minPriceText}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, "");
+                  const num = raw ? Number(raw) : undefined;
+                  setMinPriceText(raw ? Number(raw).toLocaleString("vi-VN") : "");
+                  updateFilter("minPrice", num);
+                }}
+                onBlur={() => setMinPriceText(formatVND(filters.minPrice))}
+                className="bg-input pr-8"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">₫</span>
+            </div>
           </div>
 
           {/* Max Price */}
           <div>
             <label className="text-sm text-muted-foreground mb-1.5 block">
-              Max Price (₫/hr)
+              Giá tối đa (₫/giờ)
             </label>
-            <Input
-              type="number"
-              placeholder="No limit"
-              value={filters.maxPrice || ""}
-              onChange={(e) =>
-                updateFilter(
-                  "maxPrice",
-                  e.target.value ? Number(e.target.value) : undefined
-                )
-              }
-              className="bg-input"
-              min={0}
-              step={10000}
-            />
+            <div className="relative">
+              <Input
+                type="text"
+                inputMode="numeric"
+                placeholder="Không giới hạn"
+                value={maxPriceText}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, "");
+                  const num = raw ? Number(raw) : undefined;
+                  setMaxPriceText(raw ? Number(raw).toLocaleString("vi-VN") : "");
+                  updateFilter("maxPrice", num);
+                }}
+                onBlur={() => setMaxPriceText(formatVND(filters.maxPrice))}
+                className="bg-input pr-8"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">₫</span>
+            </div>
           </div>
         </div>
       )}

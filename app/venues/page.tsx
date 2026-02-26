@@ -22,38 +22,39 @@ import type { VenueSearchParams, Venue } from "@/features/venue/types";
 import { useVenues } from "@/data/hooks/useVenues";
 import { useEffect } from "react";
 
-
-
-
-
 export default function VenuesPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [filters, setFilters] = useState<VenueSearchParams>({
+  const initialFilters: VenueSearchParams = {
     q: searchParams.get("q") || undefined,
     sportType: (searchParams.get("sport") as VenueSearchParams["sportType"]) || undefined,
     size: 10,
-  });
+  };
+  // filters: trạng thái hiển thị của các input (chưa search)
+  const [filters, setFilters] = useState<VenueSearchParams>(initialFilters);
+  // committedFilters: filters thực sự dùng để gọi API
+  const [committedFilters, setCommittedFilters] = useState<VenueSearchParams>(initialFilters);
+
   const [viewMode, setViewMode] = useState<"grid" | "list" | "map">("grid");
   const [sortBy, setSortBy] = useState("rating");
   // API Hook
   const { venues, isLoading, searchVenues } = useVenues();
 
-  // Search Effect
+  // Search Effect — chỉ chạy khi committedFilters thay đổi
   useEffect(() => {
     searchVenues({
-      q: filters.q,
-      sportType: filters.sportType,
-      lat: filters.lat,
-      lng: filters.lng,
-      radiusKm: filters.radiusKm,
-      minPrice: filters.minPrice,
-      maxPrice: filters.maxPrice,
-      page: filters.page,
-      size: filters.size ?? 10,
+      q: committedFilters.q,
+      sportType: committedFilters.sportType,
+      lat: committedFilters.lat,
+      lng: committedFilters.lng,
+      radiusKm: committedFilters.radiusKm,
+      minPrice: committedFilters.minPrice,
+      maxPrice: committedFilters.maxPrice,
+      page: committedFilters.page,
+      size: committedFilters.size ?? 10,
     });
-  }, [filters, searchVenues]);
+  }, [committedFilters, searchVenues]);
 
   // Map and Sort (Client-side sort for now as backend pagination+sort is tricky mixed)
   const sortedVenues = useMemo(() => {
@@ -72,16 +73,27 @@ export default function VenuesPage() {
     });
   }, [venues, sortBy]);
 
+  // Nút Search: commit toàn bộ filters hiện tại → trigger search
   const handleSearch = useCallback(() => {
-    // Search is reactive to filters state via useEffect above
-    // This handler might just be for specific 'Enter' key scenarios if filters aren't auto-updating
-    // For now, no-op or force refresh logic could go here if needed.
-    // Given the previous code just updated router, and we are syncing filters to state...
+    setCommittedFilters({ ...filters });
     const params = new URLSearchParams();
     if (filters.q) params.set("q", filters.q);
     if (filters.sportType) params.set("sport", filters.sportType);
     router.push(`/venues?${params.toString()}`);
   }, [filters, router]);
+
+  // Auto-search khi location thay đổi (lat/lng)
+  const handleAutoSearch = useCallback((newFilters: VenueSearchParams) => {
+    setFilters(newFilters);
+    setCommittedFilters(newFilters);
+  }, []);
+
+  // Clear all: reset cả 2 state → tự động search
+  const handleClearAll = useCallback(() => {
+    const cleared: VenueSearchParams = { size: 10 };
+    setFilters(cleared);
+    setCommittedFilters(cleared);
+  }, []);
 
   return (
     <main className="min-h-screen bg-background">
@@ -103,6 +115,8 @@ export default function VenuesPage() {
           <VenueFilters
             filters={filters}
             onFilterChange={setFilters}
+            onAutoSearch={handleAutoSearch}
+            onClearAll={handleClearAll}
             onSearch={handleSearch}
           />
 
@@ -191,7 +205,7 @@ export default function VenuesPage() {
               <Button
                 variant="link"
                 className="mt-2"
-                onClick={() => setFilters({})}
+                onClick={handleClearAll}
               >
                 Clear all filters
               </Button>
