@@ -25,6 +25,7 @@ import type { TimeSlot, Booking } from "@/features/booking/types";
 import { useVenueDetail } from "@/data/hooks/useVenues";
 import { useRealTimeSlots, useBookingActions } from "@/data/hooks/useBooking";
 import { useAuth } from "@/data/hooks/useAuth";
+import { formatCurrency } from "@/lib/utils";
 
 function BookingContent() {
   const searchParams = useSearchParams();
@@ -71,8 +72,8 @@ function BookingContent() {
   const slots: TimeSlot[] = slotDtos.map(s => ({
     courtId: selectedCourtId,
     date: selectedDate,
-    startTime: s.startTime.substring(0, 5),
-    endTime: s.endTime.substring(0, 5),
+    startTime: s.startTime,
+    endTime: s.endTime,
     status: s.isLocked ? (s.holderId === user?.userId ? SLOT_STATUS.HOLD : SLOT_STATUS.BOOKED) : SLOT_STATUS.AVAILABLE,
     price: s.price
   }));
@@ -218,7 +219,7 @@ function BookingContent() {
                   <SelectContent className="glass">
                     {courts.map((court) => (
                       <SelectItem key={court.courtId} value={court.courtId}>
-                        {court.name} - ${court.minPricePerHour}/hr
+                        {court.name} - {formatCurrency(court.minPricePerHour)}/hr
                       </SelectItem>
                     ))}
                   </SelectContent>

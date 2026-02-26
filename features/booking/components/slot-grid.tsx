@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { SLOT_STATUS, SLOT_COLORS } from "@/lib/constants";
 import type { TimeSlot } from "../types";
 
@@ -37,12 +37,13 @@ export function SlotGrid({
   };
 
   const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(":");
-    const hour = parseInt(hours);
-    const ampm = hour >= 12 ? "PM" : "AM";
-    const displayHour = hour % 12 || 12;
-    return `${displayHour}:${minutes} ${ampm}`;
+    const date = new Date(time);
+    const vnHours = (date.getUTCHours() + 7) % 24;
+    const minutes = date.getUTCMinutes();
+    return `${String(vnHours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
   };
+
+
 
   return (
     <div
@@ -65,7 +66,7 @@ export function SlotGrid({
             aria-label={`${formatTime(slot.startTime)} - ${slot.status}${isSelected ? ", selected" : ""}`}
           >
             <span className="text-sm font-medium">{formatTime(slot.startTime)}</span>
-            <span className="text-xs opacity-75">${slot.price}</span>
+            <span className="text-xs opacity-75">{formatCurrency(slot.price)}</span>
             {slot.status === SLOT_STATUS.HOLD && (
               <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-status-hold animate-pulse" />
             )}

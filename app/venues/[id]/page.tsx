@@ -32,7 +32,7 @@ import { useVenueReviews } from "@/data/hooks/useReviews";
 import { formatCurrency } from "@/lib/utils";
 
 
-function CourtCard({ court }: { court: Court }) {
+function CourtCard({ court, venueId }: { court: Court; venueId: string }) {
   const sportInfo = SPORT_TYPES.find((s) => s.id === court.sportType);
 
   return (
@@ -68,7 +68,7 @@ function CourtCard({ court }: { court: Court }) {
             <div className="font-semibold text-primary">{formatCurrency(court.minPricePerHour)}/hour</div>
           </div>
           <Button asChild>
-            <Link href={`/booking?court=${court.courtId}`}>
+            <Link href={`/booking?venue=${venueId}&court=${court.courtId}`}>
               Book Now
             </Link>
           </Button>
@@ -250,7 +250,7 @@ export default function VenueDetailPage({
                 <TabsContent value="courts" className="mt-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {venue.courts?.map((court) => (
-                      <CourtCard key={court.courtId} court={court as Court} />
+                      <CourtCard key={court.courtId} court={court as Court} venueId={venue.venueId} />
                     ))}
                   </div>
                 </TabsContent>
