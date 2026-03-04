@@ -65,6 +65,10 @@ export default function VenuesPage() {
       switch (sortBy) {
         case "rating":
           return b.ratingAvg - a.ratingAvg;
+        case "price_low":
+          return (a.minPricePerHour ?? 0) - (b.minPricePerHour ?? 0);
+        case "price_high":
+          return (b.minPricePerHour ?? 0) - (a.minPricePerHour ?? 0);
         case "reviews":
           return b.totalReviews - a.totalReviews;
         default:

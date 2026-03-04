@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { use } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -103,17 +103,11 @@ export default function VenueDetailPage({
   const { venue, isLoading, error } = useVenueDetail(id);
   const { reviews, total: totalReviews, averageRating, isLoading: reviewsLoading } = useVenueReviews(id);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  if (isLoading) {
-    return <div className="min-h-screen pt-24 flex justify-center text-foreground">Loading...</div>;
-  }
-
-  if (error || !venue) {
-    return <div className="min-h-screen pt-24 flex justify-center text-foreground">Venue not found</div>;
-  }
-
-  // Use imageUrls from venue, fallback to empty array
-  const images = venue.imageUrls || [];
+  // Lấy images trước early return để tuân thủ Rules of Hooks
+  const images = venue?.imageUrls || [];
 
   const nextImage = () => {
     setCurrentImageIndex((prev) =>
@@ -127,13 +121,42 @@ export default function VenueDetailPage({
     );
   };
 
+  // Auto-slide: chuyển ảnh mỗi 4 giây, dừng khi hover
+  // PHẢI đặt trước early return để tuân thủ Rules of Hooks
+  useEffect(() => {
+    if (images.length <= 1) return;
+    if (isPaused) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      return;
+    }
+    intervalRef.current = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+    }, 4000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [images.length, isPaused]);
+
+  if (isLoading) {
+    return <div className="min-h-screen pt-24 flex justify-center text-foreground">Loading...</div>;
+  }
+
+  if (error || !venue) {
+    return <div className="min-h-screen pt-24 flex justify-center text-foreground">Venue not found</div>;
+  }
+
+
   return (
     <main className="min-h-screen bg-background">
       <Navbar />
 
       <div className="pt-20">
         {/* Image Gallery */}
-        <div className="relative h-[400px] md:h-[500px] bg-muted">
+        <div
+          className="relative h-[400px] md:h-[500px] bg-muted"
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+        >
           {images[currentImageIndex] && (
             <Image
               src={images[currentImageIndex] || "/placeholder.svg"}
@@ -143,46 +166,68 @@ export default function VenueDetailPage({
               priority
             />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent pointer-events-none" />
 
-          {/* Gallery Controls */}
+          {/* Gallery Controls — all overlaid on image */}
           {images.length > 1 && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4">
+            <>
+              {/* Prev arrow — left side */}
               <Button
                 variant="ghost"
                 size="icon"
-                className="glass"
+                className="absolute left-3 top-1/2 -translate-y-1/2 glass z-20"
                 onClick={prevImage}
               >
                 <ChevronLeft className="h-5 w-5" />
               </Button>
-              <div className="flex items-center gap-2">
-                {images.map((_: string, idx: number) => (
-                  <button
-                    key={idx}
-                    className={`w-2 h-2 rounded-full transition-all ${idx === currentImageIndex
-                      ? "bg-primary w-4"
-                      : "bg-foreground/30"
-                      }`}
-                    onClick={() => setCurrentImageIndex(idx)}
-                  />
-                ))}
-              </div>
+
+              {/* Next arrow — right side */}
               <Button
                 variant="ghost"
                 size="icon"
-                className="glass"
+                className="absolute right-3 top-1/2 -translate-y-1/2 glass z-20"
                 onClick={nextImage}
               >
                 <ChevronRight className="h-5 w-5" />
               </Button>
-            </div>
+
+              {/* Smart dot indicator — bottom center, max 5 dots visible */}
+              {(() => {
+                const MAX = 5;
+                const total = images.length;
+                const half = Math.floor(MAX / 2);
+                let start = Math.max(0, currentImageIndex - half);
+                let end = start + MAX;
+                if (end > total) { end = total; start = Math.max(0, end - MAX); }
+                const visible = Array.from({ length: end - start }, (_, i) => start + i);
+                return (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20">
+                    {start > 0 && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-white/40 block flex-shrink-0" />
+                    )}
+                    {visible.map((idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentImageIndex(idx)}
+                        className={`rounded-full transition-all duration-300 flex-shrink-0 ${idx === currentImageIndex
+                          ? "bg-primary w-4 h-2"
+                          : "bg-white/60 w-2 h-2 hover:bg-white/80"
+                          }`}
+                      />
+                    ))}
+                    {end < total && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-white/40 block flex-shrink-0" />
+                    )}
+                  </div>
+                );
+              })()}
+            </>
           )}
 
           {/* Back Button */}
           <Button
             variant="ghost"
-            className="absolute top-24 left-4 glass"
+            className="absolute top-24 left-4 glass z-20"
             asChild
           >
             <Link href="/venues">
@@ -193,7 +238,7 @@ export default function VenueDetailPage({
         </div>
 
         {/* Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 relative z-10 pb-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 relative z-10 pb-16">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-6">
