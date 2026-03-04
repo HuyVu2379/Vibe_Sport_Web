@@ -128,10 +128,11 @@ export interface ContactDto {
 }
 
 export interface PolicyDto {
-    holdTtlMinutes: number;
-    cancelBeforeHours: number;
+    holdTTLMinutes: number;
     depositType: string;
-    depositPercent?: number;
+    refundRule: string;
+    depositPercentage: number;
+    cancelBeforeHours: number;
 }
 
 export interface CourtItemDto {

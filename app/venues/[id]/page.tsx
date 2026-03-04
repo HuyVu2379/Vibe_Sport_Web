@@ -362,7 +362,6 @@ export default function VenueDetailPage({
                     </GlassCard>
                   ) : (
                     reviews.map((review) => (
-                      console.log(review),
                       <GlassCard key={review.reviewId} variant="elevated" className="p-5">
                         <div className="flex items-start gap-4">
                           {/* Avatar */}
@@ -487,7 +486,7 @@ export default function VenueDetailPage({
                         <div>
                           <p className="text-sm font-medium">Hold Time</p>
                           <p className="text-sm text-muted-foreground">
-                            {venue.policy.holdTtlMinutes} minutes to confirm
+                            {venue.policy.holdTTLMinutes} minutes to confirm
                           </p>
                         </div>
                       </div>
@@ -500,7 +499,7 @@ export default function VenueDetailPage({
                               ? "No deposit required"
                               : venue.policy.depositType === "FULL"
                                 ? "Full payment required"
-                                : `${venue.policy.depositPercent || 0}% deposit required`}
+                                : `${venue.policy.depositPercentage || 0}% deposit required`}
                           </p>
                         </div>
                       </div>

@@ -18,14 +18,14 @@ import { SlotGrid, SlotLegend } from "@/features/booking/components/slot-grid";
 import { HoldHUD } from "@/features/booking/components/hold-hud";
 import { DatePicker } from "@/features/booking/components/date-picker";
 import { SlotGridSkeleton } from "@/components/shared/loading-skeleton";
-import { ChevronLeft, MapPin, Clock, Info } from "lucide-react";
+import { ChevronLeft, MapPin, Clock, Info, Shield, CreditCard, RefreshCw } from "lucide-react";
 import { SLOT_STATUS } from "@/lib/constants";
 import type { TimeSlot, Booking } from "@/features/booking/types";
 
 import { useVenueDetail } from "@/data/hooks/useVenues";
 import { useRealTimeSlots, useBookingActions } from "@/data/hooks/useBooking";
 import { useAuth } from "@/data/hooks/useAuth";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatLocalDate, formatLocalTime, mapRefundRule, mapDepositType, type RefundRule, type DepositType } from "@/lib/utils";
 
 function BookingContent() {
   const searchParams = useSearchParams();
@@ -179,8 +179,11 @@ function BookingContent() {
   const totalPrice = selectedSlotObjs.reduce((sum, s) => sum + s.price, 0);
 
   // Policy values from venue
-  const holdTTL = venue?.policy?.holdTtlMinutes || 15;
+  const holdTTL = venue?.policy?.holdTTLMinutes || 15;
   const cancelBeforeHours = venue?.policy?.cancelBeforeHours || 24;
+  const depositType = venue?.policy?.depositType || "NONE";
+  const depositPercentage = venue?.policy?.depositPercentage || 0;
+  const refundRule = venue?.policy?.refundRule || "NONE";
 
   return (
     <main className="min-h-screen bg-background pb-32">
@@ -285,27 +288,20 @@ function BookingContent() {
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Date</span>
                         <span className="font-medium">
-                          {new Date(selectedDate).toLocaleDateString("en-US", {
-                            weekday: "short",
-                            month: "short",
-                            day: "numeric",
-                          })}
+                          {formatLocalDate(selectedDate)}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Time</span>
                         <span className="font-medium">
-                          {selectedSlotObjs.length > 0 && (
-                            <>
-                              {selectedSlotObjs.sort((a, b) =>
-                                a.startTime.localeCompare(b.startTime)
-                              )[0].startTime}
-                              {" - "}
-                              {selectedSlotObjs.sort((a, b) =>
-                                b.endTime.localeCompare(a.endTime)
-                              )[0].endTime}
-                            </>
-                          )}
+                          {selectedSlotObjs.length > 0 && (() => {
+                            const sorted = [...selectedSlotObjs].sort((a, b) =>
+                              a.startTime.localeCompare(b.startTime)
+                            );
+                            const start = sorted[0].startTime;
+                            const end = sorted[sorted.length - 1].endTime;
+                            return `${formatLocalTime(start)} - ${formatLocalTime(end)}`;
+                          })()}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -319,7 +315,7 @@ function BookingContent() {
                     <div className="border-t border-border/50 pt-4">
                       <div className="flex justify-between text-lg font-semibold">
                         <span>Total</span>
-                        <span className="text-primary">${totalPrice}</span>
+                        <span className="text-primary">{formatCurrency(totalPrice)}</span>
                       </div>
                     </div>
 
@@ -346,17 +342,52 @@ function BookingContent() {
               </GlassCard>
 
               {/* Policies */}
-              {venue && (
-                <GlassCard variant="subtle" className="p-6">
-                  <h3 className="font-medium mb-3 text-sm">Booking Policies</h3>
-                  <ul className="space-y-2 text-xs text-muted-foreground">
-                    <li>• Hold expires in {holdTTL} minutes</li>
-                    <li>
-                      • Free cancellation up to {cancelBeforeHours}h before
-                    </li>
-                  </ul>
-                </GlassCard>
-              )}
+              {venue?.policy && (() => {
+                const deposit = mapDepositType(depositType as DepositType, depositPercentage);
+                const refund = mapRefundRule(refundRule as RefundRule, cancelBeforeHours);
+                return (
+                  <GlassCard variant="subtle" className="p-6">
+                    <h3 className="mb-6 flex items-center justify-center gap-3 text-lg font-semibold">
+                      <Info className="h-6 w-6 text-primary" />
+                      Chính sách đặt sân
+                    </h3>
+                    <ul className="space-y-3 text-xs">
+                      {/* Hold TTL */}
+                      <li className="flex items-start gap-2">
+                        <Clock className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
+                        <div>
+                          <span className="font-medium text-foreground">Thời gian giữ chỗ</span>
+                          <p className="text-muted-foreground mt-0.5">Xác nhận trong vòng {holdTTL} phút</p>
+                        </div>
+                      </li>
+                      {/* Deposit */}
+                      <li className="flex items-start gap-2">
+                        <CreditCard className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
+                        <div>
+                          <span className="font-medium text-foreground">{deposit.label}</span>
+                          <p className="text-muted-foreground mt-0.5">{deposit.description}</p>
+                        </div>
+                      </li>
+                      {/* Refund */}
+                      <li className="flex items-start gap-2">
+                        <RefreshCw className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
+                        <div>
+                          <span className="font-medium text-foreground">{refund.label}</span>
+                          <p className="text-muted-foreground mt-0.5">{refund.description}</p>
+                        </div>
+                      </li>
+                      {/* Cancellation */}
+                      <li className="flex items-start gap-2">
+                        <Shield className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
+                        <div>
+                          <span className="font-medium text-foreground">Hủy miễn phí</span>
+                          <p className="text-muted-foreground mt-0.5">Hủy trước {cancelBeforeHours} giờ không mất phí</p>
+                        </div>
+                      </li>
+                    </ul>
+                  </GlassCard>
+                );
+              })()}
             </div>
           </div>
         </div>
