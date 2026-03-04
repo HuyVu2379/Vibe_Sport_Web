@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { GlassCard } from "@/components/shared/glass-card";
 import { Button } from "@/components/ui/button";
 import { Clock, AlertTriangle, CreditCard, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency, formatLocalTime } from "@/lib/utils";
 import type { Booking } from "../types";
 
 interface HoldHUDProps {
@@ -64,9 +64,9 @@ export function HoldHUD({
     return "bg-primary";
   };
 
-  // Calculate progress percentage (assume 10 min = 600 seconds total)
-  const totalHoldTime = 600; // This should come from venue policy
-  const progress = Math.min((timeRemaining / totalHoldTime) * 100, 100);
+  // holdTTLMinutes is in minutes; timeRemaining is in seconds → convert to same unit
+  const totalHoldSeconds = (booking.holdTTLMinutes ?? 15) * 60;
+  const progress = Math.min((timeRemaining / totalHoldSeconds) * 100, 100);
 
   if (isExpired) {
     return (
@@ -132,13 +132,13 @@ export function HoldHUD({
               <span className="text-muted-foreground">Court:</span>
               <span className="font-medium">{booking.courtName}</span>
               <span className="text-muted-foreground">Date:</span>
-              <span className="font-medium">{new Date(booking.startTime).toLocaleDateString()}</span>
+              <span className="font-medium">{formatLocalTime(booking.startTime)}</span>
               <span className="text-muted-foreground">Time:</span>
               <span className="font-medium">
-                {booking.startTime} - {booking.endTime}
+                {formatLocalTime(booking.startTime)} - {formatLocalTime(booking.endTime)}
               </span>
               <span className="text-muted-foreground">Total:</span>
-              <span className="font-semibold text-primary">${booking.totalPrice}</span>
+              <span className="font-semibold text-primary">{formatCurrency(booking.totalPrice)}</span>
             </div>
           </div>
 
@@ -166,7 +166,7 @@ export function HoldHUD({
                 <>
                   <CreditCard className="h-4 w-4 mr-2" />
                   {booking.totalPrice > 0
-                    ? `Pay $${booking.totalPrice}`
+                    ? `Pay ${formatCurrency(booking.totalPrice)}`
                     : "Confirm Booking"}
                 </>
               )}

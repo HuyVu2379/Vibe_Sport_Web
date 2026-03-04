@@ -20,6 +20,7 @@ export interface Booking {
   totalPrice: number;
   createdAt: string;
   holdExpiresAt?: string;
+  holdTTLMinutes?: number;
 }
 
 export interface CreateHoldInput {

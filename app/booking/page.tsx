@@ -127,13 +127,12 @@ function BookingContent() {
 
     const startTime = selectedSlotObjs[0].startTime;
     const endTime = selectedSlotObjs[selectedSlotObjs.length - 1].endTime;
-    const totalPrice = selectedSlotObjs.reduce((sum, s) => sum + s.price, 0);
 
     try {
       const res = await createHold({
         courtId: selectedCourtId,
-        startTime: `${selectedDate}T${startTime}:00`,
-        endTime: `${selectedDate}T${endTime}:00`,
+        startTime,
+        endTime,
       });
 
       // Transform to UI Booking object for HoldHUD
@@ -147,6 +146,7 @@ function BookingContent() {
         status: "HOLD",
         totalPrice: res.totalPrice,
         holdExpiresAt: res.holdExpiresAt,
+        holdTTLMinutes: holdTTL,
         createdAt: new Date().toISOString(),
       };
 
@@ -344,7 +344,7 @@ function BookingContent() {
               {/* Policies */}
               {venue?.policy && (() => {
                 const deposit = mapDepositType(depositType as DepositType, depositPercentage);
-                const refund = mapRefundRule(refundRule as RefundRule, cancelBeforeHours);
+                const refund = mapRefundRule(refundRule as RefundRule, cancelBeforeHours, depositPercentage);
                 return (
                   <GlassCard variant="subtle" className="p-6">
                     <h3 className="mb-6 flex items-center justify-center gap-3 text-lg font-semibold">
