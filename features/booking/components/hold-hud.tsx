@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback } from "react";
 import { GlassCard } from "@/components/shared/glass-card";
 import { Button } from "@/components/ui/button";
 import { Clock, AlertTriangle, CreditCard, X } from "lucide-react";
-import { cn, formatCurrency, formatLocalTime } from "@/lib/utils";
+import { cn, formatCurrency, formatLocalDateFromISO, formatLocalTime } from "@/lib/utils";
 import type { Booking } from "../types";
+import { DepositType } from "../types";
+import { log } from "console";
 
 interface HoldHUDProps {
   booking: Booking;
@@ -67,6 +69,30 @@ export function HoldHUD({
   // holdTTLMinutes is in minutes; timeRemaining is in seconds → convert to same unit
   const totalHoldSeconds = (booking.holdTTLMinutes ?? 15) * 60;
   const progress = Math.min((timeRemaining / totalHoldSeconds) * 100, 100);
+
+  // --- Confirm button label & icon ---
+  const depositType = booking.depositType ?? DepositType.FULL;
+  let confirmLabel: string;
+  let showPayIcon: boolean;
+
+  console.log("booking information", booking);
+  switch (depositType) {
+    case DepositType.NONE:
+      confirmLabel = "Confirm Booking";
+      showPayIcon = false;
+      break;
+    case DepositType.PERCENT: {
+      const depositAmount = booking.depositAmount ?? 0;
+      confirmLabel = `Pay Deposit ${formatCurrency(depositAmount)}`;
+      showPayIcon = true;
+      break;
+    }
+    case DepositType.FULL:
+    default:
+      confirmLabel = `Pay ${formatCurrency(booking.totalPrice)}`;
+      showPayIcon = true;
+      break;
+  }
 
   if (isExpired) {
     return (
@@ -132,7 +158,7 @@ export function HoldHUD({
               <span className="text-muted-foreground">Court:</span>
               <span className="font-medium">{booking.courtName}</span>
               <span className="text-muted-foreground">Date:</span>
-              <span className="font-medium">{formatLocalTime(booking.startTime)}</span>
+              <span className="font-medium">{formatLocalDateFromISO(booking.startTime)}</span>
               <span className="text-muted-foreground">Time:</span>
               <span className="font-medium">
                 {formatLocalTime(booking.startTime)} - {formatLocalTime(booking.endTime)}
@@ -164,10 +190,8 @@ export function HoldHUD({
                 </>
               ) : (
                 <>
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  {booking.totalPrice > 0
-                    ? `Pay ${formatCurrency(booking.totalPrice)}`
-                    : "Confirm Booking"}
+                  {showPayIcon && <CreditCard className="h-4 w-4 mr-2" />}
+                  {confirmLabel}
                 </>
               )}
             </Button>

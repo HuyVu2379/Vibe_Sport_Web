@@ -21,11 +21,12 @@ import { SlotGridSkeleton } from "@/components/shared/loading-skeleton";
 import { ChevronLeft, MapPin, Clock, Info, Shield, CreditCard, RefreshCw } from "lucide-react";
 import { SLOT_STATUS } from "@/lib/constants";
 import type { TimeSlot, Booking } from "@/features/booking/types";
+import { DepositType } from "@/features/booking/types";
 
 import { useVenueDetail } from "@/data/hooks/useVenues";
 import { useRealTimeSlots, useBookingActions } from "@/data/hooks/useBooking";
 import { useAuth } from "@/data/hooks/useAuth";
-import { formatCurrency, formatLocalDate, formatLocalTime, mapRefundRule, mapDepositType, type RefundRule, type DepositType } from "@/lib/utils";
+import { formatCurrency, formatLocalDate, formatLocalTime, mapRefundRule, mapDepositType, type RefundRule, type DepositType as DepositTypeUtil } from "@/lib/utils";
 
 function BookingContent() {
   const searchParams = useSearchParams();
@@ -136,6 +137,12 @@ function BookingContent() {
       });
 
       // Transform to UI Booking object for HoldHUD
+      const venueDepositType = (depositType as string).toUpperCase() as DepositType;
+      const depositAmount =
+        venueDepositType === DepositType.PERCENT
+          ? Math.ceil((depositPercentage / 100) * res.totalPrice)
+          : undefined;
+
       const bookingUI: Booking = {
         bookingId: res.bookingId,
         courtId: selectedCourtId,
@@ -148,6 +155,8 @@ function BookingContent() {
         holdExpiresAt: res.holdExpiresAt,
         holdTTLMinutes: holdTTL,
         createdAt: new Date().toISOString(),
+        depositType: venueDepositType,
+        depositAmount,
       };
 
       setActiveHold(bookingUI);

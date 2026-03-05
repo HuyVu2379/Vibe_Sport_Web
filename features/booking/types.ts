@@ -1,6 +1,10 @@
 import type { BookingStatus, SlotStatus } from "@/lib/constants";
-import type { Court, Venue } from "@/features/venue/types";
-import type { User } from "@/features/auth/types";
+
+export enum DepositType {
+  NONE = 'NONE',
+  PERCENT = 'PERCENT',
+  FULL = 'FULL',
+}
 
 export interface TimeSlot {
   startTime: string;
@@ -21,6 +25,8 @@ export interface Booking {
   createdAt: string;
   holdExpiresAt?: string;
   holdTTLMinutes?: number;
+  depositType?: DepositType;
+  depositAmount?: number;
 }
 
 export interface CreateHoldInput {
