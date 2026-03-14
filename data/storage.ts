@@ -1,3 +1,5 @@
+import { GetMeResponseDto } from "@/domain/types";
+
 const TOKEN_KEY = 'vibe_auth_token';
 const USER_KEY = 'vibe_user_info';
 
@@ -19,7 +21,7 @@ export const storage = {
         const user = localStorage.getItem(USER_KEY);
         return user ? JSON.parse(user) : null;
     },
-    setUser: (user: any) => {
+    setUser: (user: GetMeResponseDto) => {
         if (typeof window === 'undefined') return;
         localStorage.setItem(USER_KEY, JSON.stringify(user));
     },

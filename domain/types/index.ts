@@ -11,10 +11,6 @@ export type MessageType = 'TEXT' | 'IMAGE' | 'SYSTEM';
 export interface User {
     userId: string;
     role: Role;
-    fullName?: string;
-    phone?: string;
-    email?: string;
-    avatarUrl?: string;
 }
 
 // ============================================
@@ -34,7 +30,8 @@ export interface LoginResponseDto {
 export interface RegisterDto {
     fullName: string;
     email: string;
-    phone: string;
+    phone?: string;
+    role: Role;
     password: string;
 }
 
@@ -49,6 +46,7 @@ export interface RegisterResponseDto {
 
 export interface UpdateProfileDto {
     fullName?: string;
+    phoneNumber?: string;
     avatarUrl?: string;
 }
 
@@ -72,6 +70,14 @@ export interface SuccessResponseDto {
     message: string;
 }
 
+export interface GetMeResponseDto {
+    userId: string;
+    fullName: string;
+    email: string;
+    phone?: string;
+    avatarUrl?: string;
+    role: Role;
+}
 // ============================================
 // VENUES
 // ============================================
@@ -393,6 +399,16 @@ export interface FavoritesListResponseDto {
 // ============================================
 
 export interface UploadResultDto {
-    url: string;
     publicId: string;
+    url: string;
+    secureUrl: string;
+    format: string;
+    width?: number;
+    height?: number;
+    resourceType: string;
+}
+
+export interface AvatarUploadDto {
+    file: File;
+    folder: string;
 }

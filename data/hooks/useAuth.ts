@@ -2,19 +2,21 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '../api/client';
 import { storage } from '../storage';
+import { useGetMe } from './useUsers';
 import {
     LoginDto,
     RegisterDto,
     LoginResponseDto,
     RegisterResponseDto,
+    GetMeResponseDto,
 } from '../../domain/types';
 
 export function useAuth() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [user, setUser] = useState<any>(null);
-
+    const [user, setUser] = useState<GetMeResponseDto | null>(null);
+    const { getMe } = useGetMe();
     // Initial load
     const initUser = () => {
         setUser(storage.getUser());
@@ -31,8 +33,7 @@ export function useAuth() {
 
             if (response.token) {
                 storage.setToken(response.token);
-                storage.setUser(response.user);
-                setUser(response.user);
+                getMe();
                 router.push('/venues');
             }
             return response;
@@ -50,11 +51,9 @@ export function useAuth() {
         setError(null);
         try {
             const response = await apiClient.post<RegisterResponseDto>('/auth/register', data);
-
             if (response.token) {
                 storage.setToken(response.token);
-                storage.setUser(response.user);
-                setUser(response.user);
+                getMe();
                 router.push('/venues');
             }
             return response;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { storage } from "@/data/storage";
 import {
   User,
   Mail,
@@ -23,11 +24,15 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useUpdateProfile } from "@/data/hooks/useUsers";
+import { AVATAR_FOLDER } from "@/lib/constants";
+import { useUploadImage } from "@/data/hooks/useUpload";
 
 const profileSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-  phone: z.string().optional(),
+  fullName: z.string().min(2, "Name must be at least 2 characters"),
+  phoneNumber: z.string().optional(),
+  avatarUrl: z.string().optional(),
 });
 
 const passwordSchema = z
@@ -46,30 +51,28 @@ const passwordSchema = z
 type ProfileFormData = z.infer<typeof profileSchema>;
 type PasswordFormData = z.infer<typeof passwordSchema>;
 
-// Mock user data
-const mockUser = {
-  id: "user1",
-  name: "John Doe",
-  email: "john.doe@example.com",
-  phone: "+1 (555) 123-4567",
-  avatar: null,
-  role: "CUSTOMER" as const,
-  createdAt: "2025-06-15T10:00:00Z",
-  updatedAt: "2026-01-20T10:00:00Z",
-};
-
+const user = storage.getUser();
 export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const { updateProfile } = useUpdateProfile()
+  const { uploadImage } = useUploadImage()
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: mockUser.name,
-      email: mockUser.email,
-      phone: mockUser.phone,
+      fullName: user?.fullName,
+      phoneNumber: user?.phone,
+      avatarUrl: user?.avatarUrl,
     },
   });
+
+  const isDirty = Object.keys(profileForm.formState.dirtyFields).length > 0;
+
+  // Watch the image value for immediate preview
+  const avatarUrlPreview = profileForm.watch("avatarUrl") || user?.avatarUrl;
 
   const passwordForm = useForm<PasswordFormData>({
     resolver: zodResolver(passwordSchema),
@@ -82,11 +85,11 @@ export default function ProfilePage() {
 
   const onProfileSubmit = async (data: ProfileFormData) => {
     setIsSaving(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    console.log("Profile data:", data);
+    // call updateProfile
+    await updateProfile(data);
     setIsSaving(false);
     setSaveSuccess(true);
+    profileForm.reset(data);
     setTimeout(() => setSaveSuccess(false), 3000);
   };
 
@@ -100,6 +103,20 @@ export default function ProfilePage() {
     alert("Password updated successfully!");
   };
 
+  const onChangeAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setIsUploadingAvatar(true);
+    const uploadResult = await uploadImage(file, AVATAR_FOLDER);
+    setIsUploadingAvatar(false);
+    if (uploadResult) {
+      profileForm.setValue("avatarUrl", uploadResult.secureUrl, {
+        shouldDirty: true,
+        shouldValidate: true,
+        shouldTouch: true,
+      });
+    }
+  }
   const stats = [
     { label: "Total Bookings", value: "24", icon: Calendar },
     { label: "Favorite Venues", value: "5", icon: MapPin },
@@ -108,7 +125,7 @@ export default function ProfilePage() {
 
   return (
     <main className="min-h-screen bg-background">
-      <Navbar isAuthenticated userName={mockUser.name} />
+      <Navbar isAuthenticated userName={user?.fullName} />
 
       <div className="pt-24 pb-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -156,12 +173,39 @@ export default function ProfilePage() {
                 <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-6">
                   {/* Avatar */}
                   <div className="flex items-center gap-6">
-                    <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center">
-                      <User className="h-10 w-10 text-secondary-foreground" />
-                    </div>
+                    <Avatar className={cn(
+                      "h-20 w-20 border-2",
+                      isUploadingAvatar ? "border-primary border-t-transparent animate-spin" : "border-border"
+                    )}>
+                      {isUploadingAvatar ? (
+                        <AvatarFallback className="bg-secondary flex items-center justify-center">
+                          <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                        </AvatarFallback>
+                      ) : (
+                        <>
+                          <AvatarImage src={avatarUrlPreview} alt="Avatar" className="object-cover" />
+                          <AvatarFallback className="bg-secondary text-secondary-foreground">
+                            <User className="h-10 w-10" />
+                          </AvatarFallback>
+                        </>
+                      )}
+                    </Avatar>
                     <div>
-                      <Button type="button" variant="outline" size="sm">
-                        Change Avatar
+                      <input
+                        type="file"
+                        accept="image/jpeg, image/png, image/gif"
+                        className="hidden"
+                        ref={fileInputRef}
+                        onChange={onChangeAvatar}
+                      />
+                      <Button
+                        onClick={() => fileInputRef.current?.click()}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={isUploadingAvatar}
+                      >
+                        {isUploadingAvatar ? "Uploading..." : "Change Avatar"}
                       </Button>
                       <p className="text-xs text-muted-foreground mt-1">
                         JPG, PNG or GIF. Max 2MB.
@@ -176,13 +220,13 @@ export default function ProfilePage() {
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="name"
-                        {...profileForm.register("name")}
+                        {...profileForm.register("fullName")}
                         className="pl-10 bg-input"
                       />
                     </div>
-                    {profileForm.formState.errors.name && (
+                    {profileForm.formState.errors.fullName && (
                       <p className="text-sm text-destructive">
-                        {profileForm.formState.errors.name.message}
+                        {profileForm.formState.errors.fullName.message}
                       </p>
                     )}
                   </div>
@@ -195,17 +239,12 @@ export default function ProfilePage() {
                       <Input
                         id="email"
                         type="email"
-                        {...profileForm.register("email")}
+                        disabled
+                        value={user?.email}
                         className="pl-10 bg-input"
                       />
                     </div>
-                    {profileForm.formState.errors.email && (
-                      <p className="text-sm text-destructive">
-                        {profileForm.formState.errors.email.message}
-                      </p>
-                    )}
                   </div>
-
                   {/* Phone */}
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
@@ -213,7 +252,7 @@ export default function ProfilePage() {
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="phone"
-                        {...profileForm.register("phone")}
+                        {...profileForm.register("phoneNumber")}
                         className="pl-10 bg-input"
                       />
                     </div>
@@ -223,7 +262,7 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-4">
                     <Button
                       type="submit"
-                      disabled={isSaving}
+                      disabled={isSaving || (!isDirty && !saveSuccess)}
                       className={cn(saveSuccess && "bg-status-confirmed")}
                     >
                       {isSaving ? (

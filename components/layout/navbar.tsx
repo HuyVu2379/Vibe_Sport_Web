@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
+import { storage } from "@/data/storage";
 interface NavbarProps {
   isAuthenticated?: boolean;
   userRole?: "CUSTOMER" | "OWNER" | "STAFF" | "ADMIN";
@@ -36,6 +36,11 @@ export function Navbar({
   notificationCount = 0,
 }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const navLinks = [
     { href: "/venues", label: "Find Venues" },
@@ -49,7 +54,7 @@ export function Navbar({
       : userRole === "STAFF"
         ? "/staff"
         : null;
-
+  const token = storage.getToken();
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -105,7 +110,9 @@ export function Navbar({
                       <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
                         <User className="h-4 w-4" />
                       </div>
-                      <span className="hidden lg:inline">{userName}</span>
+                      <span className="hidden lg:inline">
+                        {mounted ? userName || "Unknown" : "Unknown"}
+                      </span>
                       <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -143,9 +150,18 @@ export function Navbar({
               </>
             ) : (
               <>
-                <Button variant="ghost" asChild>
-                  <Link href="/login">Sign In</Link>
-                </Button>
+                {token ? (
+                  <Button size="icon" className="rounded-full bg-secondary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground shadow-sm h-10 w-10" asChild>
+                    <Link href="/profile">
+                      <User className="h-5 w-5" />
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button variant="ghost" asChild>
+                    <Link href="/login">Sign In</Link>
+                  </Button>
+                )}
+
                 <Button asChild className="glow-primary">
                   <Link href="/register">Get Started</Link>
                 </Button>

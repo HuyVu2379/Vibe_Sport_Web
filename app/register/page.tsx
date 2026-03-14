@@ -12,27 +12,31 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Eye, EyeOff, Mail, Lock, User, Zap } from "lucide-react";
-
+import { useAuth } from "@/data/hooks/useAuth";
 export default function RegisterPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
+    fullName: "",
     email: "",
     password: "",
-    role: "player" as "player" | "owner",
+    phone: "",
+    role: "CUSTOMER" as "OWNER" | "CUSTOMER",
     acceptTerms: false,
   });
+  const { register } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    // Simulate registration
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsLoading(false);
-    router.push("/venues");
+    await register({
+      fullName: formData.fullName,
+      email: formData.email,
+      password: formData.password,
+      phone: formData.phone,
+      role: formData.role,
+    });
   };
 
   return (
@@ -66,17 +70,17 @@ export default function RegisterPage() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="fullName">Full Name</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
-                  id="name"
+                  id="fullName"
                   type="text"
                   placeholder="John Doe"
                   className="pl-10 bg-input border-border"
-                  value={formData.name}
+                  value={formData.fullName}
                   onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
+                    setFormData({ ...formData, fullName: e.target.value })
                   }
                   required
                 />
@@ -139,18 +143,18 @@ export default function RegisterPage() {
               <RadioGroup
                 value={formData.role}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, role: value as "player" | "owner" })
+                  setFormData({ ...formData, role: value as "OWNER" | "CUSTOMER" })
                 }
                 className="grid grid-cols-2 gap-4"
               >
                 <div>
                   <RadioGroupItem
-                    value="player"
-                    id="player"
+                    value="CUSTOMER"
+                    id="CUSTOMER"
                     className="peer sr-only"
                   />
                   <Label
-                    htmlFor="player"
+                    htmlFor="CUSTOMER"
                     className="flex flex-col items-center justify-center rounded-xl border-2 border-border bg-muted/20 p-4 hover:bg-muted/40 cursor-pointer peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 transition-all"
                   >
                     <span className="text-2xl mb-2">🏃</span>
@@ -160,12 +164,12 @@ export default function RegisterPage() {
                 </div>
                 <div>
                   <RadioGroupItem
-                    value="owner"
-                    id="owner"
+                    value="OWNER"
+                    id="OWNER"
                     className="peer sr-only"
                   />
                   <Label
-                    htmlFor="owner"
+                    htmlFor="OWNER"
                     className="flex flex-col items-center justify-center rounded-xl border-2 border-border bg-muted/20 p-4 hover:bg-muted/40 cursor-pointer peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 transition-all"
                   >
                     <span className="text-2xl mb-2">🏟️</span>
@@ -176,7 +180,7 @@ export default function RegisterPage() {
               </RadioGroup>
             </div>
 
-            <div className="flex items-start space-x-2">
+            <div className="flex items-center space-x-2">
               <Checkbox
                 id="terms"
                 checked={formData.acceptTerms}
@@ -184,6 +188,7 @@ export default function RegisterPage() {
                   setFormData({ ...formData, acceptTerms: checked as boolean })
                 }
                 required
+                className="border-white"
               />
               <label
                 htmlFor="terms"

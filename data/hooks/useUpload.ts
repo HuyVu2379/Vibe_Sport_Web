@@ -6,13 +6,13 @@ export function useUploadImage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const uploadImage = async (file: File) => {
+    const uploadImage = async (file: File, folder: string) => {
         setIsLoading(true);
         setError(null);
         try {
             const formData = new FormData();
             formData.append('file', file);
-
+            formData.append('folder', folder);
             const res = await apiClient.post<UploadResultDto>('/upload/image', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });

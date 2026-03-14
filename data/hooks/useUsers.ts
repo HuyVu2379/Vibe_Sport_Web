@@ -8,21 +8,21 @@ import {
     ForgotPasswordVerifyDto,
     SuccessResponseDto,
     User,
+    GetMeResponseDto,
 } from '../../domain/types';
 
 export function useUpdateProfile() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { getMe } = useGetMe();
 
     const updateProfile = async (data: UpdateProfileDto) => {
         setIsLoading(true);
         setError(null);
         try {
-            const response = await apiClient.patch<User>('/users/profile', data);
-            // Update stored user
-            const currentUser = storage.getUser();
-            if (currentUser) {
-                storage.setUser({ ...currentUser, ...data });
+            const response = await apiClient.patch<SuccessResponseDto>('/users/profile', data);
+            if (response && response.message) {
+                await getMe();
             }
             return response;
         } catch (err: any) {
@@ -86,6 +86,29 @@ export function useForgotPassword() {
             setIsLoading(false);
         }
     };
-
     return { requestOtp, verifyAndReset, isLoading, error };
 }
+
+export function useGetMe() {
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const getMe = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const response = await apiClient.get<GetMeResponseDto>('/users/me');
+            if (response) {
+                storage.setUser(response);
+            }
+            return response;
+        } catch (err: any) {
+            setError(err.message || 'Failed to get user');
+            throw err;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return { getMe, isLoading, error };
+};

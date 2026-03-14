@@ -105,3 +105,5 @@ export const ANIMATION = {
   normal: 300,
   slow: 500,
 } as const;
+
+export const AVATAR_FOLDER = 'Vibe-Sport/avatars';
