@@ -216,11 +216,13 @@ export interface ConfirmBookingDto {
 
 export interface ConfirmResponseDto {
     bookingId: string;
-    status: 'CONFIRMED';
+    status: 'CONFIRMED' | 'HOLD';
     courtId: string;
     startTime: string;
     endTime: string;
     totalPrice: number;
+    paymentUrl?: string;
+    orderCode?: number;
 }
 
 export interface CancelBookingDto {

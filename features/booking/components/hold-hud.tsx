@@ -3,15 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { GlassCard } from "@/components/shared/glass-card";
 import { Button } from "@/components/ui/button";
-import { Clock, AlertTriangle, CreditCard, X } from "lucide-react";
+import { Clock, AlertTriangle, CreditCard, X, Loader2 } from "lucide-react";
 import { cn, formatCurrency, formatLocalDateFromISO, formatLocalTime } from "@/lib/utils";
 import type { Booking } from "../types";
 import { DepositType } from "../types";
-import { log } from "console";
 
 interface HoldHUDProps {
   booking: Booking;
-  onConfirm: () => void;
+  onConfirm: () => Promise<{ paymentUrl?: string } | void>;
   onCancel: () => void;
   isConfirming?: boolean;
 }
@@ -24,6 +23,7 @@ export function HoldHUD({
 }: HoldHUDProps) {
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [isExpired, setIsExpired] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const calculateTimeRemaining = useCallback(() => {
     if (!booking.holdExpiresAt) return 0;
@@ -75,7 +75,6 @@ export function HoldHUD({
   let confirmLabel: string;
   let showPayIcon: boolean;
 
-  console.log("booking information", booking);
   switch (depositType) {
     case DepositType.NONE:
       confirmLabel = "Confirm Booking";
@@ -93,6 +92,18 @@ export function HoldHUD({
       showPayIcon = true;
       break;
   }
+
+  const handleConfirmClick = async () => {
+    const result = await onConfirm();
+
+    // If the API returned a PayOS payment URL, redirect to it
+    if (result && result.paymentUrl) {
+      setIsRedirecting(true);
+      window.location.href = result.paymentUrl;
+    }
+  };
+
+  const processing = isConfirming || isRedirecting;
 
   if (isExpired) {
     return (
@@ -175,18 +186,19 @@ export function HoldHUD({
               size="icon"
               onClick={onCancel}
               className="text-muted-foreground hover:text-destructive"
+              disabled={processing}
             >
               <X className="h-5 w-5" />
             </Button>
             <Button
-              onClick={onConfirm}
-              disabled={isConfirming}
+              onClick={handleConfirmClick}
+              disabled={processing}
               className="flex-1 sm:flex-none glow-primary"
             >
-              {isConfirming ? (
+              {processing ? (
                 <>
-                  <div className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
-                  Processing...
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  {isRedirecting ? "Redirecting to PayOS..." : "Processing..."}
                 </>
               ) : (
                 <>

@@ -169,10 +169,17 @@ function BookingContent() {
     }
   };
 
-  const handleConfirm = async () => {
+  const handleConfirm = async (): Promise<{ paymentUrl?: string } | void> => {
     if (!activeHold) return;
     try {
-      await confirmBooking(activeHold.bookingId, { note: "Booking via Web" });
+      const result = await confirmBooking(activeHold.bookingId, { note: "Booking via Web" });
+
+      // If PayOS returned a payment URL, pass it back to HoldHUD for redirect
+      if (result.paymentUrl) {
+        return { paymentUrl: result.paymentUrl };
+      }
+
+      // No payment required (depositType = NONE) → confirmed directly
       alert("Booking Confirmed!");
       setActiveHold(null);
       setSelectedSlots([]);
