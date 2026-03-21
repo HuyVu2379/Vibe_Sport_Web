@@ -41,7 +41,12 @@ axiosInstance.interceptors.response.use(
                 }
             }
 
-            return Promise.reject(data || { message: 'Unknown error', errorCode: 'UNKNOWN' });
+            const apiError = new Error(data?.message || 'Unknown error');
+            (apiError as any).errorCode = data?.errorCode || 'UNKNOWN';
+            (apiError as any).traceId = data?.traceId;
+            (apiError as any).response = data;
+
+            return Promise.reject(apiError);
         }
         return Promise.reject(error);
     }

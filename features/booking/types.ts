@@ -85,3 +85,11 @@ export interface SlotUpdateEvent {
   startTime: string;
   endTime: string;
 }
+
+export const SlotConfirmedEvent = {
+  SLOT_RELEASED: "slot.released",
+  SLOT_LOCKED: "slot.locked",
+  SLOT_CANCELLED: "slot.cancelled",
+  SLOT_CONFIRMED: "slot.confirmed",
+  SLOT_UPDATED: "slot.updated",
+}

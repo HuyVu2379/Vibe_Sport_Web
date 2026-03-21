@@ -13,6 +13,7 @@ import {
     CancelResponseDto,
     BookingsListResponseDto
 } from '../../domain/types';
+import { SlotConfirmedEvent } from '@/features/booking/types';
 
 // Extended Slot type for UI
 export interface EISlot extends SlotDto {
@@ -59,7 +60,7 @@ export function useRealTimeSlots(courtId: string | null, date: string, venueId: 
             if (payload.courtId !== courtId) return;
 
             setSlots(prev => prev.map(slot => {
-                if (slot.startTime === payload.startTime) {
+                if (slot.startTime >= payload.startTime && slot.startTime < payload.endTime) {
                     return { ...slot, status: 'UNAVAILABLE', isLocked: true, holderId: payload.holderId };
                 }
                 return slot;
@@ -69,7 +70,7 @@ export function useRealTimeSlots(courtId: string | null, date: string, venueId: 
         const handleSlotReleased = (payload: any) => {
             if (payload.courtId !== courtId) return;
             setSlots(prev => prev.map(slot => {
-                if (slot.startTime === payload.startTime) {
+                if (slot.startTime >= payload.startTime && slot.startTime < payload.endTime) {
                     return { ...slot, status: 'AVAILABLE', isLocked: false, holderId: undefined };
                 }
                 return slot;
@@ -78,22 +79,22 @@ export function useRealTimeSlots(courtId: string | null, date: string, venueId: 
 
         const handleSlotUpdated = (payload: any) => {
             if (payload.courtId !== courtId) return;
-            setSlots(prev => prev.map(slot => {
-                if (slot.startTime === payload.startTime) {
+            setSlots(prev => prev.map(slot => {  
+                if (slot.startTime >= payload.startTime && slot.startTime < payload.endTime) {
                     return { ...slot, status: 'UNAVAILABLE', isLocked: true }; // Confirmed
                 }
                 return slot;
             }));
         };
 
-        socketService.on('slot.locked', handleSlotLocked);
-        socketService.on('slot.released', handleSlotReleased);
-        socketService.on('slot.updated', handleSlotUpdated);
+        socketService.on(SlotConfirmedEvent.SLOT_LOCKED, handleSlotLocked);
+        socketService.on(SlotConfirmedEvent.SLOT_RELEASED, handleSlotReleased);
+        socketService.on(SlotConfirmedEvent.SLOT_UPDATED, handleSlotUpdated);
 
         return () => {
-            socketService.off('slot.locked', handleSlotLocked);
-            socketService.off('slot.released', handleSlotReleased);
-            socketService.off('slot.updated', handleSlotUpdated);
+            socketService.off(SlotConfirmedEvent.SLOT_LOCKED, handleSlotLocked);
+            socketService.off(SlotConfirmedEvent.SLOT_RELEASED, handleSlotReleased);
+            socketService.off(SlotConfirmedEvent.SLOT_UPDATED, handleSlotUpdated);
             socketService.leaveVenue(venueId);
         };
     }, [venueId, courtId]);

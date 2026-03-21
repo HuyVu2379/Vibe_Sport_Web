@@ -25,9 +25,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useUpdateProfile } from "@/data/hooks/useUsers";
+import { useChangePassword, useUpdateProfile } from "@/data/hooks/useUsers";
 import { AVATAR_FOLDER } from "@/lib/constants";
 import { useUploadImage } from "@/data/hooks/useUpload";
+import { toast } from "@/hooks/use-toast";
 
 const profileSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters"),
@@ -58,6 +59,7 @@ export default function ProfilePage() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const { updateProfile } = useUpdateProfile()
   const { uploadImage } = useUploadImage()
+  const { changePassword } = useChangePassword()
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const profileForm = useForm<ProfileFormData>({
@@ -95,12 +97,19 @@ export default function ProfilePage() {
 
   const onPasswordSubmit = async (data: PasswordFormData) => {
     setIsSaving(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    console.log("Password data:", data);
+    // call changePassword
+    const changePwdResult = await changePassword({
+      oldPassword: data.currentPassword,
+      newPassword: data.newPassword,
+    });
     setIsSaving(false);
-    passwordForm.reset();
-    alert("Password updated successfully!");
+    if (changePwdResult && changePwdResult.success) {
+      passwordForm.reset();
+      toast({
+        title: "Success",
+        description: "Password updated successfully!",
+      });
+    }
   };
 
   const onChangeAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -125,7 +134,7 @@ export default function ProfilePage() {
 
   return (
     <main className="min-h-screen bg-background">
-      <Navbar isAuthenticated userName={user?.fullName} />
+      <Navbar />
 
       <div className="pt-24 pb-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">

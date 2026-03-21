@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, Suspense } from "react";
+import { useState, useCallback, Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
@@ -32,7 +32,12 @@ function BookingContent() {
   const searchParams = useSearchParams();
   const venueId = searchParams.get("venue") || "1";
   const courtIdParam = searchParams.get("court");
-  const { user } = useAuth();
+  const { user, initUser } = useAuth();
+
+  useEffect(() => {
+    initUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 1. Fetch Venue Data
   const { venue } = useVenueDetail(venueId);

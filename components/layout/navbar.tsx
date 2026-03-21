@@ -22,25 +22,38 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { storage } from "@/data/storage";
-interface NavbarProps {
-  isAuthenticated?: boolean;
-  userRole?: "CUSTOMER" | "OWNER" | "STAFF" | "ADMIN";
-  userName?: string;
-  notificationCount?: number;
-}
+import { useAuth } from "@/data/hooks/useAuth";
 
-export function Navbar({
-  isAuthenticated = false,
-  userRole,
-  userName,
-  notificationCount = 0,
-}: NavbarProps) {
+export function Navbar(props: { notificationCount?: number }) {
+  const { logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [authState, setAuthState] = useState<{
+    isAuthenticated: boolean;
+    userRole: "CUSTOMER" | "OWNER" | "STAFF" | "ADMIN" | null;
+    userName: string;
+  }>({
+    isAuthenticated: false,
+    userRole: null,
+    userName: "",
+  });
+
+  const notificationCount = props.notificationCount || 0;
 
   useEffect(() => {
     setMounted(true);
+    const token = storage.getToken();
+    const user = storage.getUser();
+    if (token && user) {
+      setAuthState({
+        isAuthenticated: true,
+        userRole: user.role,
+        userName: user.fullName || "User",
+      });
+    }
   }, []);
+
+  const { isAuthenticated, userRole, userName } = authState;
 
   const navLinks = [
     { href: "/venues", label: "Find Venues" },
@@ -54,7 +67,11 @@ export function Navbar({
       : userRole === "STAFF"
         ? "/staff"
         : null;
-  const token = storage.getToken();
+
+  const handleLogout = async () => {
+    await logout();
+    setAuthState({ isAuthenticated: false, userRole: null, userName: "" });
+  };
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -141,7 +158,7 @@ export function Navbar({
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="flex items-center gap-2 text-destructive">
+                    <DropdownMenuItem className="flex items-center gap-2 text-destructive cursor-pointer" onClick={handleLogout}>
                       <LogOut className="h-4 w-4" />
                       Sign Out
                     </DropdownMenuItem>
@@ -150,18 +167,9 @@ export function Navbar({
               </>
             ) : (
               <>
-                {token ? (
-                  <Button size="icon" className="rounded-full bg-secondary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground shadow-sm h-10 w-10" asChild>
-                    <Link href="/profile">
-                      <User className="h-5 w-5" />
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button variant="ghost" asChild>
-                    <Link href="/login">Sign In</Link>
-                  </Button>
-                )}
-
+                <Button variant="ghost" asChild>
+                  <Link href="/login">Sign In</Link>
+                </Button>
                 <Button asChild className="glow-primary">
                   <Link href="/register">Get Started</Link>
                 </Button>
@@ -223,7 +231,8 @@ export function Navbar({
                 )}
                 <Button
                   variant="ghost"
-                  className="w-full justify-start text-destructive"
+                  className="w-full justify-start text-destructive cursor-pointer"
+                  onClick={handleLogout}
                 >
                   Sign Out
                 </Button>
