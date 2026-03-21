@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { apiClient } from '../api/client';
+import { apiClient, API_ENDPOINTS } from '../api/client';
 import {
     SearchVenuesQueryDto,
     VenueListResponseDto,
@@ -26,7 +26,7 @@ export function useVenues() {
             if (params.page !== undefined) query.append('page', params.page.toString());
             if (params.size !== undefined) query.append('size', params.size.toString());
 
-            const response = await apiClient.get<VenueListResponseDto>(`/venues?${query.toString()}`);
+            const response = await apiClient.get<VenueListResponseDto>(`${API_ENDPOINTS.VENUES.LIST}?${query.toString()}`);
             setData(response);
         } catch (err: any) {
             console.error('Search venues error:', err);
@@ -49,7 +49,7 @@ export function useVenueDetail(venueId: string) {
         setIsLoading(true);
         setError(null);
         try {
-            const response = await apiClient.get<VenueDetailResponseDto>(`/venues/${venueId}`);
+            const response = await apiClient.get<VenueDetailResponseDto>(API_ENDPOINTS.VENUES.DETAIL(venueId));
             setVenue(response);
         } catch (err: any) {
             console.error('Get venue detail error:', err);

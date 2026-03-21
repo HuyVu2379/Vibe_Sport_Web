@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { apiClient } from '../api/client';
+import { apiClient, API_ENDPOINTS } from '../api/client';
 import { storage } from '../storage';
 import {
     UpdateProfileDto,
@@ -20,7 +20,7 @@ export function useUpdateProfile() {
         setIsLoading(true);
         setError(null);
         try {
-            const response = await apiClient.patch<SuccessResponseDto>('/users/profile', data);
+            const response = await apiClient.patch<SuccessResponseDto>(API_ENDPOINTS.USERS.PROFILE, data);
             if (response && response.message) {
                 await getMe();
             }
@@ -44,7 +44,7 @@ export function useChangePassword() {
         setIsLoading(true);
         setError(null);
         try {
-            const response = await apiClient.post<SuccessResponseDto>('/users/change-password', data);
+            const response = await apiClient.post<SuccessResponseDto>(API_ENDPOINTS.USERS.CHANGE_PASSWORD, data);
             return response;
         } catch (err: any) {
             setError(err.message || 'Failed to change password');
@@ -65,7 +65,7 @@ export function useForgotPassword() {
         setIsLoading(true);
         setError(null);
         try {
-            return await apiClient.post<SuccessResponseDto>('/users/forgot-password/request', data);
+            return await apiClient.post<SuccessResponseDto>(API_ENDPOINTS.USERS.FORGOT_PASSWORD_REQUEST, data);
         } catch (err: any) {
             setError(err.message || 'Failed to send OTP');
             throw err;
@@ -78,7 +78,7 @@ export function useForgotPassword() {
         setIsLoading(true);
         setError(null);
         try {
-            return await apiClient.post<SuccessResponseDto>('/users/forgot-password/verify', data);
+            return await apiClient.post<SuccessResponseDto>(API_ENDPOINTS.USERS.FORGOT_PASSWORD_VERIFY, data);
         } catch (err: any) {
             setError(err.message || 'Failed to reset password');
             throw err;
@@ -97,7 +97,7 @@ export function useGetMe() {
         setIsLoading(true);
         setError(null);
         try {
-            const response = await apiClient.get<GetMeResponseDto>('/users/me');
+            const response = await apiClient.get<GetMeResponseDto>(API_ENDPOINTS.USERS.GET_ME);
             if (response) {
                 storage.setUser(response);
             }

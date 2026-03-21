@@ -42,15 +42,34 @@ export function Navbar(props: { notificationCount?: number }) {
 
   useEffect(() => {
     setMounted(true);
-    const token = storage.getToken();
-    const user = storage.getUser();
-    if (token && user) {
-      setAuthState({
-        isAuthenticated: true,
-        userRole: user.role,
-        userName: user.fullName || "User",
-      });
-    }
+
+    const updateAuth = () => {
+      const token = storage.getToken();
+      const user = storage.getUser();
+      if (token && user) {
+        setAuthState({
+          isAuthenticated: true,
+          userRole: user.role,
+          userName: user.fullName || "User",
+        });
+      } else {
+        setAuthState({
+          isAuthenticated: false,
+          userRole: null,
+          userName: "",
+        });
+      }
+    };
+
+    updateAuth();
+
+    window.addEventListener("storage", updateAuth);
+    window.addEventListener("auth-change", updateAuth);
+
+    return () => {
+      window.removeEventListener("storage", updateAuth);
+      window.removeEventListener("auth-change", updateAuth);
+    };
   }, []);
 
   const { isAuthenticated, userRole, userName } = authState;
@@ -72,6 +91,7 @@ export function Navbar(props: { notificationCount?: number }) {
     await logout();
     setAuthState({ isAuthenticated: false, userRole: null, userName: "" });
   };
+  console.log("check is authentication: ", isAuthenticated)
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

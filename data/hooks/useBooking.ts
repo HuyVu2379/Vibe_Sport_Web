@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { apiClient } from '../api/client';
+import { apiClient, API_ENDPOINTS } from '../api/client';
 import { socketService } from '../socket/socket';
 import { storage } from '../storage';
 import {
@@ -32,7 +32,7 @@ export function useRealTimeSlots(courtId: string | null, date: string, venueId: 
         setError(null);
         try {
             const res = await apiClient.get<AvailabilityResponseDto>(
-                `/courts/${courtId}/availability?date=${date}`
+                API_ENDPOINTS.COURTS.AVAILABILITY(courtId, date)
             );
             setSlots(res.slots.map(s => ({ ...s, isLocked: s.status === 'UNAVAILABLE' })));
         } catch (err: any) {
@@ -108,7 +108,7 @@ export function useBookingActions() {
     const createHold = async (data: CreateHoldDto) => {
         setIsProcessing(true);
         try {
-            return await apiClient.post<HoldResponseDto>('/bookings/hold', data);
+            return await apiClient.post<HoldResponseDto>(API_ENDPOINTS.BOOKINGS.CREATE_HOLD, data);
         } finally {
             setIsProcessing(false);
         }
@@ -117,7 +117,7 @@ export function useBookingActions() {
     const confirmBooking = async (bookingId: string, data: ConfirmBookingDto = {}) => {
         setIsProcessing(true);
         try {
-            return await apiClient.post<ConfirmResponseDto>(`/bookings/${bookingId}/confirm`, data);
+            return await apiClient.post<ConfirmResponseDto>(API_ENDPOINTS.BOOKINGS.CONFIRM(bookingId), data);
         } finally {
             setIsProcessing(false);
         }
@@ -126,7 +126,7 @@ export function useBookingActions() {
     const cancelBooking = async (bookingId: string, data: CancelBookingDto) => {
         setIsProcessing(true);
         try {
-            return await apiClient.post<CancelResponseDto>(`/bookings/${bookingId}/cancel`, data);
+            return await apiClient.post<CancelResponseDto>(API_ENDPOINTS.BOOKINGS.CANCEL(bookingId), data);
         } finally {
             setIsProcessing(false);
         }
@@ -145,7 +145,7 @@ export function useMyBookings(params: any = {}) {
             const query = new URLSearchParams();
             if (params.status && params.status !== 'all') query.append('status', params.status);
 
-            const res = await apiClient.get<BookingsListResponseDto>(`/me/bookings?${query.toString()}`);
+            const res = await apiClient.get<BookingsListResponseDto>(`${API_ENDPOINTS.BOOKINGS.LIST}?${query.toString()}`);
             setData(res);
         } catch (err) {
             console.error(err);

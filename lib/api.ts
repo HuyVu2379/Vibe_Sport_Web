@@ -1,4 +1,5 @@
 // API Configuration and base utilities
+import { toast } from "sonner";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 
 export interface ApiError {
@@ -31,6 +32,12 @@ export class ApiClient {
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        toast.error("Phiên đăng nhập đã hết hạn hoặc bạn chưa đăng nhập.", {
+          description: "Vui lòng đăng nhập lại để tiếp tục.",
+        });
+      }
+
       const error: ApiError = await response.json().catch(() => ({
         message: "An error occurred",
         statusCode: response.status,

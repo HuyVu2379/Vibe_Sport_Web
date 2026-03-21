@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, Suspense, useEffect } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
@@ -27,7 +27,6 @@ import { useVenueDetail } from "@/data/hooks/useVenues";
 import { useRealTimeSlots, useBookingActions } from "@/data/hooks/useBooking";
 import { useAuth } from "@/data/hooks/useAuth";
 import { formatCurrency, formatLocalDate, formatLocalTime, mapRefundRule, mapDepositType, type RefundRule, type DepositType as DepositTypeUtil } from "@/lib/utils";
-
 function BookingContent() {
   const searchParams = useSearchParams();
   const venueId = searchParams.get("venue") || "1";
@@ -166,7 +165,7 @@ function BookingContent() {
 
       setActiveHold(bookingUI);
     } catch (err: any) {
-      alert("Failed to hold slot: " + err.message);
+      // alert("Failed to hold slot: " + err.message);
     }
   };
 

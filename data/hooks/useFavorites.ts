@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { apiClient } from '../api/client';
+import { apiClient, API_ENDPOINTS } from '../api/client';
 import {
     FavoriteStatusResponseDto,
     ToggleFavoriteResponseDto,
@@ -15,7 +15,7 @@ export function useFavoriteStatus(venueId: string) {
         setIsLoading(true);
         try {
             const res = await apiClient.get<FavoriteStatusResponseDto>(
-                `/venues/${venueId}/favorite/status`
+                API_ENDPOINTS.FAVORITES.STATUS(venueId)
             );
             setIsFavorite(res.isFavorite);
         } catch {
@@ -39,7 +39,7 @@ export function useToggleFavorite() {
         setIsLoading(true);
         try {
             const res = await apiClient.post<ToggleFavoriteResponseDto>(
-                `/venues/${venueId}/favorite/toggle`
+                API_ENDPOINTS.FAVORITES.TOGGLE(venueId)
             );
             return res.isFavorite;
         } finally {
@@ -58,7 +58,7 @@ export function useUserFavorites(page = 0, size = 20) {
         setIsLoading(true);
         try {
             const res = await apiClient.get<FavoritesListResponseDto>(
-                `/favorites?page=${page}&size=${size}`
+                `${API_ENDPOINTS.FAVORITES.USER_LIST}?page=${page}&size=${size}`
             );
             setData(res);
         } catch (err) {

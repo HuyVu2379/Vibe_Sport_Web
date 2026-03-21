@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { apiClient } from '../api/client';
+import { apiClient, API_ENDPOINTS } from '../api/client';
 import {
     CreateReviewDto,
     ReplyDto,
@@ -18,7 +18,7 @@ export function useVenueReviews(venueId: string, page = 0, size = 10) {
         setError(null);
         try {
             const res = await apiClient.get<VenueReviewsResponseDto>(
-                `/venues/${venueId}/reviews?page=${page}&size=${size}`
+                `${API_ENDPOINTS.REVIEWS.VENUE_LIST(venueId)}?page=${page}&size=${size}`
             );
             setData(res);
         } catch (err: any) {
@@ -51,7 +51,7 @@ export function useCreateReview() {
         setError(null);
         try {
             return await apiClient.post<ReviewResponseDto>(
-                `/bookings/${bookingId}/review`,
+                API_ENDPOINTS.REVIEWS.CREATE(bookingId),
                 data
             );
         } catch (err: any) {
@@ -72,7 +72,7 @@ export function useAddReply() {
         setIsLoading(true);
         try {
             return await apiClient.post<ReviewResponseDto>(
-                `/reviews/${reviewId}/reply`,
+                API_ENDPOINTS.REVIEWS.REPLY(reviewId),
                 data
             );
         } finally {

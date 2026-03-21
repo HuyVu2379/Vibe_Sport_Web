@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { apiClient } from '../api/client';
+import { apiClient, API_ENDPOINTS } from '../api/client';
 import {
     ConversationResponseDto,
     ConversationsListResponseDto,
@@ -16,7 +16,7 @@ export function useConversations(page = 0, size = 20) {
         setIsLoading(true);
         try {
             const res = await apiClient.get<ConversationsListResponseDto>(
-                `/conversations?page=${page}&size=${size}`
+                `${API_ENDPOINTS.CHAT.CONVERSATIONS}?page=${page}&size=${size}`
             );
             setData(res);
         } catch (err) {
@@ -47,7 +47,7 @@ export function useMessages(conversationId: string, page = 0, size = 50) {
         setIsLoading(true);
         try {
             const res = await apiClient.get<MessagesListResponseDto>(
-                `/conversations/${conversationId}/messages?page=${page}&size=${size}`
+                `${API_ENDPOINTS.CHAT.MESSAGES(conversationId)}?page=${page}&size=${size}`
             );
             setData(res);
         } catch (err) {
@@ -76,7 +76,7 @@ export function useSendMessage() {
         setIsLoading(true);
         try {
             return await apiClient.post<MessageResponseDto>(
-                `/conversations/${conversationId}/messages`,
+                API_ENDPOINTS.CHAT.MESSAGES(conversationId),
                 data
             );
         } finally {
@@ -94,7 +94,7 @@ export function useStartBookingChat() {
         setIsLoading(true);
         try {
             return await apiClient.post<ConversationResponseDto>(
-                `/conversations/booking/${bookingId}`
+                API_ENDPOINTS.CHAT.START_BOOKING_CHAT(bookingId)
             );
         } finally {
             setIsLoading(false);
@@ -111,7 +111,7 @@ export function useStartVenueInquiry() {
         setIsLoading(true);
         try {
             return await apiClient.post<ConversationResponseDto>(
-                `/conversations/venue/${venueId}/inquiry`
+                API_ENDPOINTS.CHAT.START_VENUE_INQUIRY(venueId)
             );
         } finally {
             setIsLoading(false);

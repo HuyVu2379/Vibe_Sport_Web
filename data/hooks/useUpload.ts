@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { apiClient } from '../api/client';
+import { apiClient, API_ENDPOINTS } from '../api/client';
 import { UploadResultDto } from '../../domain/types';
 
 export function useUploadImage() {
@@ -13,7 +13,7 @@ export function useUploadImage() {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('folder', folder);
-            const res = await apiClient.post<UploadResultDto>('/upload/image', formData, {
+            const res = await apiClient.post<UploadResultDto>(API_ENDPOINTS.UPLOAD.IMAGE, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
             return res;
@@ -32,7 +32,7 @@ export function useUploadImage() {
             const formData = new FormData();
             files.forEach((file) => formData.append('files', file));
 
-            const res = await apiClient.post<UploadResultDto[]>('/upload/images', formData, {
+            const res = await apiClient.post<UploadResultDto[]>(API_ENDPOINTS.UPLOAD.IMAGES, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
             return res;
@@ -53,7 +53,7 @@ export function useDeleteFile() {
     const deleteFile = async (publicId: string) => {
         setIsLoading(true);
         try {
-            await apiClient.delete(`/upload?publicId=${publicId}`);
+            await apiClient.delete(`${API_ENDPOINTS.UPLOAD.DELETE}?publicId=${publicId}`);
         } finally {
             setIsLoading(false);
         }

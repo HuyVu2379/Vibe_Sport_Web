@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { apiClient } from '../api/client';
+import { apiClient, API_ENDPOINTS } from '../api/client';
 import {
     VenueAnalyticsResponseDto,
     OwnerBookingsListResponseDto,
@@ -18,7 +18,7 @@ export function useOwnerAnalytics(venueId: string, from: string, to: string) {
             setIsLoading(true);
             try {
                 const res = await apiClient.get<VenueAnalyticsResponseDto>(
-                    `/owner/analytics/${venueId}?from=${from}&to=${to}`
+                    `${API_ENDPOINTS.OWNER.ANALYTICS(venueId)}?from=${from}&to=${to}`
                 );
                 setAnalytics(res);
             } catch (err) {
@@ -42,7 +42,7 @@ export function useOwnerBookings(params: any = {}) {
         setIsLoading(true);
         try {
             const query = new URLSearchParams(params).toString();
-            const res = await apiClient.get<OwnerBookingsListResponseDto>(`/owner/bookings?${query}`);
+            const res = await apiClient.get<OwnerBookingsListResponseDto>(`${API_ENDPOINTS.OWNER.BOOKINGS}?${query}`);
             setData(res);
         } catch (err) {
             console.error(err);
@@ -60,7 +60,7 @@ export function useOwnerBookings(params: any = {}) {
 
 export function useOwnerActions() {
     const cancelBooking = async (bookingId: string, data: OwnerCancelBookingDto) => {
-        return apiClient.post<CancelResponseDto>(`/owner/bookings/${bookingId}/cancel`, data);
+        return apiClient.post<CancelResponseDto>(API_ENDPOINTS.OWNER.CANCEL_BOOKING(bookingId), data);
     };
 
     return { cancelBooking };

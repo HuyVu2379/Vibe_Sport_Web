@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiClient } from '../api/client';
+import { apiClient, API_ENDPOINTS } from '../api/client';
 import { storage } from '../storage';
 import { useGetMe } from './useUsers';
 import {
@@ -26,7 +26,7 @@ export function useAuth() {
         setIsLoading(true);
         setError(null);
         try {
-            const response = await apiClient.post<LoginResponseDto>('/auth/login', {
+            const response = await apiClient.post<LoginResponseDto>(API_ENDPOINTS.AUTH.LOGIN, {
                 phoneOrEmail: data.phoneOrEmail,
                 otpOrPassword: data.otpOrPassword,
             });
@@ -50,7 +50,7 @@ export function useAuth() {
         setIsLoading(true);
         setError(null);
         try {
-            const response = await apiClient.post<RegisterResponseDto>('/auth/register', data);
+            const response = await apiClient.post<RegisterResponseDto>(API_ENDPOINTS.AUTH.REGISTER, data);
             if (response.token) {
                 storage.setToken(response.token);
                 getMe();
@@ -68,7 +68,7 @@ export function useAuth() {
 
     const logout = async () => {
         try {
-            await apiClient.post('/users/logout');
+            await apiClient.post(API_ENDPOINTS.USERS.LOGOUT);
         } catch {
             // Best effort — clear local state regardless
         }
