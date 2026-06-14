@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { GlassCard } from "@/components/shared/glass-card";
 import { Button } from "@/components/ui/button";
-import { Clock, AlertTriangle, CreditCard, X, Loader2 } from "lucide-react";
+import { Clock, AlertTriangle, CreditCard, X, Loader2, ChevronUp, ChevronDown } from "lucide-react";
 import { cn, formatCurrency, formatLocalDateFromISO, formatLocalTime } from "@/lib/utils";
 import type { Booking } from "../types";
 import { DepositType } from "../types";
@@ -13,6 +14,8 @@ interface HoldHUDProps {
   onConfirm: () => Promise<{ paymentUrl?: string } | void>;
   onCancel: () => void;
   isConfirming?: boolean;
+  /** URL để navigate về trang booking khi bấm mini pill */
+  bookingUrl?: string;
 }
 
 export function HoldHUD({
@@ -20,10 +23,18 @@ export function HoldHUD({
   onConfirm,
   onCancel,
   isConfirming = false,
+  bookingUrl,
 }: HoldHUDProps) {
+  const router = useRouter();
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [isExpired, setIsExpired] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const pathname = usePathname();
+  // Show minimized when not on booking page
+  const isOnBookingPage = pathname?.startsWith("/booking");
+  const isMinimized = !isOnBookingPage;
 
   const calculateTimeRemaining = useCallback(() => {
     if (!booking.holdExpiresAt) return 0;
@@ -48,6 +59,13 @@ export function HoldHUD({
     return () => clearInterval(interval);
   }, [calculateTimeRemaining]);
 
+  // Collapse expanded panel when navigating back to booking page
+  useEffect(() => {
+    if (!isMinimized) {
+      setIsExpanded(false);
+    }
+  }, [isMinimized]);
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -66,7 +84,6 @@ export function HoldHUD({
     return "bg-primary";
   };
 
-  // holdTTLMinutes is in minutes; timeRemaining is in seconds → convert to same unit
   const totalHoldSeconds = (booking.holdTTLMinutes ?? 15) * 60;
   const progress = Math.min((timeRemaining / totalHoldSeconds) * 100, 100);
 
@@ -95,8 +112,6 @@ export function HoldHUD({
 
   const handleConfirmClick = async () => {
     const result = await onConfirm();
-
-    // If the API returned a PayOS payment URL, redirect to it
     if (result && result.paymentUrl) {
       setIsRedirecting(true);
       window.location.href = result.paymentUrl;
@@ -129,6 +144,162 @@ export function HoldHUD({
     );
   }
 
+  // ─── MINIMIZED PILL (other pages) ───────────────────────────────────────────
+  if (isMinimized) {
+    return (
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center">
+        {/* Expanded panel on hover / click */}
+        <div
+          className={cn(
+            "mb-2 transition-all duration-300 ease-in-out origin-bottom",
+            isExpanded
+              ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
+              : "opacity-0 scale-95 translate-y-2 pointer-events-none"
+          )}
+        >
+          <GlassCard
+            variant="elevated"
+            glow="primary"
+            className="p-4 sm:p-5 w-[min(90vw,480px)] shadow-2xl border border-primary/20"
+          >
+            {/* Progress bar */}
+            <div className="h-1 rounded-full bg-muted overflow-hidden mb-4">
+              <div
+                className={cn("h-full transition-all duration-1000", getProgressColor())}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+
+            <div className="flex flex-col gap-4">
+              {/* Timer + info */}
+              <div className="flex items-center gap-4">
+                <div
+                  className={cn(
+                    "w-11 h-11 rounded-full flex items-center justify-center shrink-0",
+                    timeRemaining <= 60 ? "bg-destructive/20" : "bg-primary/20"
+                  )}
+                >
+                  <Clock className={cn("h-5 w-5", getTimeColor())} />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                    Time Remaining
+                  </p>
+                  <p className={cn("text-2xl font-bold font-mono", getTimeColor())}>
+                    {formatTime(timeRemaining)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Booking details */}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm border-t border-border/40 pt-3">
+                <span className="text-muted-foreground">Court:</span>
+                <span className="font-medium">{booking.courtName}</span>
+                <span className="text-muted-foreground">Date:</span>
+                <span className="font-medium">{formatLocalDateFromISO(booking.startTime)}</span>
+                <span className="text-muted-foreground">Time:</span>
+                <span className="font-medium">
+                  {formatLocalTime(booking.startTime)} - {formatLocalTime(booking.endTime)}
+                </span>
+                <span className="text-muted-foreground">Total:</span>
+                <span className="font-semibold text-primary">{formatCurrency(booking.totalPrice)}</span>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2 pt-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onCancel}
+                  className="text-muted-foreground hover:text-destructive"
+                  disabled={processing}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+                <Button
+                  onClick={handleConfirmClick}
+                  disabled={processing}
+                  className="flex-1 glow-primary"
+                >
+                  {processing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      {isRedirecting ? "Redirecting to PayOS..." : "Processing..."}
+                    </>
+                  ) : (
+                    <>
+                      {showPayIcon && <CreditCard className="h-4 w-4 mr-2" />}
+                      {confirmLabel}
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Warning */}
+              {timeRemaining <= 120 && timeRemaining > 0 && (
+                <div className="flex items-center gap-2 text-xs text-status-hold border-t border-border/40 pt-3">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  <span>Hurry! Your hold will expire soon.</span>
+                </div>
+              )}
+            </div>
+          </GlassCard>
+        </div>
+
+        {/* Mini pill */}
+        <button
+          onClick={() => {
+            if (bookingUrl) {
+              router.push(bookingUrl);
+            }
+          }}
+          onMouseEnter={() => setIsExpanded(true)}
+          onMouseLeave={() => setIsExpanded(false)}
+          className={cn(
+            "group flex items-center gap-3 px-5 py-2.5 rounded-full",
+            "glass-card border border-primary/30 shadow-lg shadow-black/30",
+            "hover:border-primary/60 hover:glow-primary transition-all duration-200",
+            "cursor-pointer select-none"
+          )}
+          aria-label="Quay lại trang đặt sân"
+        >
+          {/* Clock icon */}
+          <div
+            className={cn(
+              "w-7 h-7 rounded-full flex items-center justify-center shrink-0",
+              timeRemaining <= 60 ? "bg-destructive/20" : "bg-primary/20"
+            )}
+          >
+            <Clock className={cn("h-4 w-4", getTimeColor())} />
+          </div>
+
+          {/* Court name */}
+          <span className="text-sm font-medium text-foreground max-w-[120px] truncate">
+            {booking.courtName}
+          </span>
+
+          {/* Separator */}
+          <span className="text-muted-foreground/50 text-xs">·</span>
+
+          {/* Timer */}
+          <span className={cn("text-sm font-bold font-mono tabular-nums", getTimeColor())}>
+            {formatTime(timeRemaining)}
+          </span>
+
+          {/* Chevron */}
+          <span className="text-muted-foreground/60 group-hover:text-muted-foreground transition-colors">
+            {isExpanded ? (
+              <ChevronDown className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronUp className="h-3.5 w-3.5" />
+            )}
+          </span>
+        </button>
+      </div>
+    );
+  }
+
+  // ─── FULL HUD (booking page) ─────────────────────────────────────────────────
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 p-4 sm:p-6">
       {/* Progress Bar at top */}

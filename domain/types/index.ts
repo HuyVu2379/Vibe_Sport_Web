@@ -4,7 +4,7 @@
 
 export type Role = 'CUSTOMER' | 'OWNER' | 'ADMIN' | 'STAFF';
 export type BookingStatus = 'HOLD' | 'CONFIRMED' | 'CANCELLED_BY_USER' | 'CANCELLED_BY_OWNER' | 'EXPIRED' | 'COMPLETED';
-export type SlotStatus = 'AVAILABLE' | 'UNAVAILABLE';
+export type SlotStatus = 'AVAILABLE' | 'HOLD' | 'BOOKED';
 export type ConversationType = 'BOOKING' | 'VENUE_INQUIRY' | 'GENERAL';
 export type MessageType = 'TEXT' | 'IMAGE' | 'SYSTEM';
 

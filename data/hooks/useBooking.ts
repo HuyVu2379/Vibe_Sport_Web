@@ -15,9 +15,8 @@ import {
 } from '../../domain/types';
 import { SlotConfirmedEvent } from '@/features/booking/types';
 
-// Extended Slot type for UI
+// Extended Slot type for UI (keeps holderId for HOLD detection)
 export interface EISlot extends SlotDto {
-    isLocked?: boolean;
     holderId?: string;
 }
 
@@ -34,7 +33,8 @@ export function useRealTimeSlots(courtId: string | null, date: string, venueId: 
             const res = await apiClient.get<AvailabilityResponseDto>(
                 API_ENDPOINTS.COURTS.AVAILABILITY(courtId, date)
             );
-            setSlots(res.slots.map(s => ({ ...s, isLocked: s.status === 'UNAVAILABLE' })));
+            // Backend now returns AVAILABLE | HOLD | BOOKED directly
+            setSlots(res.slots.map(s => ({ ...s })));
         } catch (err: any) {
             console.error('Fetch slots error:', err);
             setError(err.message);
@@ -61,7 +61,7 @@ export function useRealTimeSlots(courtId: string | null, date: string, venueId: 
 
             setSlots(prev => prev.map(slot => {
                 if (slot.startTime >= payload.startTime && slot.startTime < payload.endTime) {
-                    return { ...slot, status: 'UNAVAILABLE', isLocked: true, holderId: payload.holderId };
+                    return { ...slot, status: 'HOLD' as const, holderId: payload.holderId };
                 }
                 return slot;
             }));
@@ -71,7 +71,7 @@ export function useRealTimeSlots(courtId: string | null, date: string, venueId: 
             if (payload.courtId !== courtId) return;
             setSlots(prev => prev.map(slot => {
                 if (slot.startTime >= payload.startTime && slot.startTime < payload.endTime) {
-                    return { ...slot, status: 'AVAILABLE', isLocked: false, holderId: undefined };
+                    return { ...slot, status: 'AVAILABLE' as const, holderId: undefined };
                 }
                 return slot;
             }));
@@ -81,7 +81,7 @@ export function useRealTimeSlots(courtId: string | null, date: string, venueId: 
             if (payload.courtId !== courtId) return;
             setSlots(prev => prev.map(slot => {  
                 if (slot.startTime >= payload.startTime && slot.startTime < payload.endTime) {
-                    return { ...slot, status: 'UNAVAILABLE', isLocked: true }; // Confirmed
+                    return { ...slot, status: 'BOOKED' as const }; // Confirmed → BOOKED
                 }
                 return slot;
             }));

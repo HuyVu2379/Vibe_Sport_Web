@@ -15,11 +15,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SlotGrid, SlotLegend } from "@/features/booking/components/slot-grid";
-import { HoldHUD } from "@/features/booking/components/hold-hud";
 import { DatePicker } from "@/features/booking/components/date-picker";
 import { SlotGridSkeleton } from "@/components/shared/loading-skeleton";
 import { ChevronLeft, MapPin, Clock, Info, Shield, CreditCard, RefreshCw } from "lucide-react";
-import { SLOT_STATUS } from "@/lib/constants";
+
 import type { TimeSlot, Booking } from "@/features/booking/types";
 import { DepositType } from "@/features/booking/types";
 
@@ -27,6 +26,7 @@ import { useVenueDetail } from "@/data/hooks/useVenues";
 import { useRealTimeSlots, useBookingActions } from "@/data/hooks/useBooking";
 import { useAuth } from "@/data/hooks/useAuth";
 import { formatCurrency, formatLocalDate, formatLocalTime, mapRefundRule, mapDepositType, type RefundRule, type DepositType as DepositTypeUtil } from "@/lib/utils";
+import { useBookingHold } from "@/features/booking/context/booking-hold-context";
 function BookingContent() {
   const searchParams = useSearchParams();
   const venueId = searchParams.get("venue") || "1";
@@ -67,21 +67,22 @@ function BookingContent() {
   );
 
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
-  const [activeHold, setActiveHold] = useState<Booking | null>(null);
 
+  const { activeHold, setActiveHold, clearHold, setOnConfirmHold, setIsConfirming: setHoldConfirming, setBookingVenueId } = useBookingHold();
   const { createHold, confirmBooking, isProcessing: isConfirming } = useBookingActions();
 
   const selectedCourt = courts.find((c) => c.courtId === selectedCourtId);
 
-  // Map Backend Slots to UI TimeSlot (using startTime as unique key)
+  // Map Backend Slots to UI TimeSlot (status is AVAILABLE | HOLD | BOOKED directly from API)
   const slots: TimeSlot[] = slotDtos.map(s => ({
     courtId: selectedCourtId,
     date: selectedDate,
     startTime: s.startTime,
     endTime: s.endTime,
-    status: s.isLocked ? (s.holderId === user?.userId ? SLOT_STATUS.HOLD : SLOT_STATUS.BOOKED) : SLOT_STATUS.AVAILABLE,
+    status: s.status,
     price: s.price
   }));
+
 
   const handleDateChange = (date: string) => {
     setSelectedDate(date);
@@ -164,33 +165,33 @@ function BookingContent() {
       };
 
       setActiveHold(bookingUI);
+      setBookingVenueId(venueId);
+
+      // Register the confirm handler in global context
+      setOnConfirmHold(async () => {
+        try {
+          setHoldConfirming(true);
+          const result = await confirmBooking(bookingUI.bookingId, { note: "Booking via Web" });
+          if (result.paymentUrl) {
+            return { paymentUrl: result.paymentUrl };
+          }
+          alert("Booking Confirmed!");
+          clearHold();
+          setSelectedSlots([]);
+          reloadSlots();
+        } catch (err: any) {
+          alert("Confirmation failed: " + err.message);
+        } finally {
+          setHoldConfirming(false);
+        }
+      });
     } catch (err: any) {
       // alert("Failed to hold slot: " + err.message);
     }
   };
 
-  const handleConfirm = async (): Promise<{ paymentUrl?: string } | void> => {
-    if (!activeHold) return;
-    try {
-      const result = await confirmBooking(activeHold.bookingId, { note: "Booking via Web" });
-
-      // If PayOS returned a payment URL, pass it back to HoldHUD for redirect
-      if (result.paymentUrl) {
-        return { paymentUrl: result.paymentUrl };
-      }
-
-      // No payment required (depositType = NONE) → confirmed directly
-      alert("Booking Confirmed!");
-      setActiveHold(null);
-      setSelectedSlots([]);
-      reloadSlots();
-    } catch (err: any) {
-      alert("Confirmation failed: " + err.message);
-    }
-  };
-
   const handleCancelHold = () => {
-    setActiveHold(null);
+    clearHold();
     setSelectedSlots([]);
     reloadSlots();
   };
@@ -412,16 +413,6 @@ function BookingContent() {
           </div>
         </div>
       </div>
-
-      {/* Hold HUD */}
-      {activeHold && (
-        <HoldHUD
-          booking={activeHold}
-          onConfirm={handleConfirm}
-          onCancel={handleCancelHold}
-          isConfirming={isConfirming}
-        />
-      )}
 
       <Footer />
     </main>

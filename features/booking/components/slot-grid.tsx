@@ -81,8 +81,8 @@ export function SlotGrid({
 export function SlotLegend() {
   const statuses = [
     { status: SLOT_STATUS.AVAILABLE, label: "Available" },
-    { status: SLOT_STATUS.HOLD, label: "On Hold" },
     { status: SLOT_STATUS.BOOKED, label: "Booked" },
+    { status: SLOT_STATUS.HOLD, label: "On Hold" },
   ];
 
   return (

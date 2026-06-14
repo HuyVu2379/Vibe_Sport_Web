@@ -3,6 +3,8 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Geist_Mono, Archivo_Black } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "@/components/ui/sonner";
+import { BookingHoldProvider } from "@/features/booking/context/booking-hold-context";
+import { GlobalHoldHUD } from "@/components/shared/global-hold-hud";
 import "./globals.css";
 
 const _inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -53,9 +55,12 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="font-sans antialiased min-h-screen bg-background text-foreground">
-        {children}
-        <Toaster />
-        <Analytics />
+        <BookingHoldProvider>
+          {children}
+          <GlobalHoldHUD />
+          <Toaster />
+          <Analytics />
+        </BookingHoldProvider>
       </body>
     </html>
   );
